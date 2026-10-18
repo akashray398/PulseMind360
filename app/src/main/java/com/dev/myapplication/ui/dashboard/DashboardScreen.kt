@@ -1,13 +1,21 @@
 package com.dev.myapplication.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,8 +33,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DeveloperMode
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Sync
@@ -36,6 +49,7 @@ import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -43,6 +57,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -59,7 +76,9 @@ import com.dev.myapplication.data.remote.Resource
 import com.dev.myapplication.ui.components.AnimatedBatteryGauge
 import com.dev.myapplication.ui.components.BatteryTrendVisualizer
 import com.dev.myapplication.ui.components.GlassCard
+import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
+import com.dev.myapplication.ui.theme.StatusWarning
 import com.dev.myapplication.ui.theme.VioletSecondary
 
 @Composable
@@ -73,6 +92,7 @@ fun DashboardScreen(
     val frameState by viewModel.framePerformanceState.collectAsStateWithLifecycle()
     val networkInfoState by viewModel.networkInfoState.collectAsStateWithLifecycle()
     val workerState by viewModel.workerState.collectAsStateWithLifecycle()
+    val healthScore by viewModel.systemHealthScore.collectAsStateWithLifecycle()
 
     val configuration = LocalConfiguration.current
     val isTabletOrLandscape = configuration.screenWidthDp >= 600
@@ -87,131 +107,22 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // App Title Banner
-        GlassCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp, horizontal = 2.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Pulsing Logo Emblem
-                    val infiniteTransition = rememberInfiniteTransition(label = "HeaderLogoPulse")
-                    val pulseAlpha by infiniteTransition.animateFloat(
-                        initialValue = 0.65f,
-                        targetValue = 1.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1200, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "PulseAlpha"
-                    )
-                    val pulseScale by infiniteTransition.animateFloat(
-                        initialValue = 0.95f,
-                        targetValue = 1.08f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1200, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "PulseScale"
-                    )
+        TitleBanner()
 
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(42.dp)
-                            .graphicsLayer {
-                                scaleX = pulseScale
-                                scaleY = pulseScale
-                                alpha = pulseAlpha
-                            }
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                shape = CircleShape
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = "PulseMind Emblem",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
+        // Hero System Health Overview Card
+        SystemHealthHeroCard(
+            healthScore = healthScore,
+            batteryLevel = batteryState.level,
+            isCharging = batteryState.isCharging,
+            networkConnected = networkState.isConnected,
+            hasAnomaly = anomaly.hasAnomaly
+        )
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        val gradientOffset by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 600f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(3500, easing = LinearEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "TitleGradient"
-                        )
-
-                        val titleBrush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                VioletSecondary,
-                                MaterialTheme.colorScheme.primary
-                            ),
-                            start = Offset(gradientOffset, 0f),
-                            end = Offset(gradientOffset + 300f, 300f)
-                        )
-
-                        Text(
-                            text = "PULSEMIND 360",
-                            style = TextStyle(
-                                brush = titleBrush,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.5.sp
-                            )
-                        )
-                        Text(
-                            text = "Real-Time Contextual System Monitor",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Live Indicator Badge
-                Surface(
-                    color = StatusGood.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, StatusGood.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(StatusGood, CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "LIVE",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StatusGood,
-                            letterSpacing = 1.sp
-                        )
-                    }
-                }
-            }
-        }
+        // Quick Action Chips Row
+        QuickActionsRow(
+            onFetchNetwork = { viewModel.fetchNetworkInfo() },
+            onTriggerSync = { viewModel.triggerSyncWorker() }
+        )
 
         if (isTabletOrLandscape) {
             // Dual Column Adaptive Layout for Wide Screen / Tablet
@@ -225,17 +136,25 @@ fun DashboardScreen(
                 ) {
                     BatteryMetricsSection(batteryState, insights.timeRemainingEstimate)
                     BatteryTrendSection(insights.trendHistory)
-                    AnomalySection(anomaly)
+                    if (anomaly.hasAnomaly) {
+                        AnomalySection(anomaly)
+                    }
                 }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     SmartAIAdvisorySection(insights.healthAdvisories)
-                    FramePerformanceSection(frameState)
-                    NetworkStatusSection(networkState)
-                    NetworkApiSection(networkInfoState, onFetch = { viewModel.fetchNetworkInfo() })
-                    WorkerTaskSection(workerState, onRunTask = { viewModel.triggerSyncWorker() })
+                    UnifiedNetworkSection(
+                        networkState = networkState,
+                        networkInfoState = networkInfoState,
+                        onFetchInfo = { viewModel.fetchNetworkInfo() }
+                    )
+                    DeveloperDiagnosticsSection(
+                        frameState = frameState,
+                        workerState = workerState,
+                        onRunWorker = { viewModel.triggerSyncWorker() }
+                    )
                 }
             }
         } else {
@@ -246,10 +165,347 @@ fun DashboardScreen(
             }
             BatteryTrendSection(insights.trendHistory)
             SmartAIAdvisorySection(insights.healthAdvisories)
-            FramePerformanceSection(frameState)
-            NetworkStatusSection(networkState)
-            NetworkApiSection(networkInfoState, onFetch = { viewModel.fetchNetworkInfo() })
-            WorkerTaskSection(workerState, onRunTask = { viewModel.triggerSyncWorker() })
+            UnifiedNetworkSection(
+                networkState = networkState,
+                networkInfoState = networkInfoState,
+                onFetchInfo = { viewModel.fetchNetworkInfo() }
+            )
+            DeveloperDiagnosticsSection(
+                frameState = frameState,
+                workerState = workerState,
+                onRunWorker = { viewModel.triggerSyncWorker() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TitleBanner() {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp, horizontal = 2.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                val infiniteTransition = rememberInfiniteTransition(label = "HeaderLogoPulse")
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.65f,
+                    targetValue = 1.0f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "PulseAlpha"
+                )
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 0.95f,
+                    targetValue = 1.08f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "PulseScale"
+                )
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .graphicsLayer {
+                            scaleX = pulseScale
+                            scaleY = pulseScale
+                            alpha = pulseAlpha
+                        }
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = "PulseMind Emblem",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    val gradientOffset by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 600f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(3500, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "TitleGradient"
+                    )
+
+                    val titleBrush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            VioletSecondary,
+                            MaterialTheme.colorScheme.primary
+                        ),
+                        start = Offset(gradientOffset, 0f),
+                        end = Offset(gradientOffset + 300f, 300f)
+                    )
+
+                    Text(
+                        text = "PULSEMIND 360",
+                        style = TextStyle(
+                            brush = titleBrush,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.5.sp
+                        )
+                    )
+                    Text(
+                        text = "Real-Time Contextual System Monitor",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Surface(
+                color = StatusGood.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, StatusGood.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(StatusGood, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "LIVE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StatusGood,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SystemHealthHeroCard(
+    healthScore: Int,
+    batteryLevel: Int,
+    isCharging: Boolean,
+    networkConnected: Boolean,
+    hasAnomaly: Boolean
+) {
+    val animatedScore by animateIntAsState(
+        targetValue = healthScore,
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "HealthScoreAnimation"
+    )
+
+    val (scoreColor, scoreLabel) = when {
+        animatedScore >= 85 -> StatusGood to "OPTIMAL HEALTH"
+        animatedScore >= 65 -> StatusWarning to "STABLE"
+        else -> StatusError to "ACTION REQUIRED"
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        hasGlowBorder = true
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Radial Progress Indicator Score Ring
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(84.dp)
+            ) {
+                CircularProgressIndicator(
+                    progress = { animatedScore / 100f },
+                    modifier = Modifier.size(80.dp),
+                    color = scoreColor,
+                    strokeWidth = 7.dp,
+                    trackColor = scoreColor.copy(alpha = 0.15f)
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$animatedScore%",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "SCORE",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Surface(
+                    color = scoreColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, scoreColor.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = scoreLabel,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = scoreColor,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+
+                Text(
+                    text = "Contextual System Health",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.BatteryChargingFull,
+                            contentDescription = "Battery",
+                            tint = if (isCharging) StatusGood else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "$batteryLevel%", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (networkConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
+                            contentDescription = "Network",
+                            tint = if (networkConnected) StatusGood else StatusError,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (networkConnected) "Online" else "Offline",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (hasAnomaly) Icons.Default.Warning else Icons.Default.CheckCircle,
+                            contentDescription = "Anomaly",
+                            tint = if (hasAnomaly) StatusError else StatusGood,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (hasAnomaly) "Alert" else "Clear",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionsRow(
+    onFetchNetwork: () -> Unit,
+    onTriggerSync: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onFetchNetwork() },
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Public,
+                    contentDescription = "IP Context",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "IP Diagnostics",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onTriggerSync() },
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = "Run Sync",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Sync Worker",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
@@ -367,34 +623,11 @@ private fun SmartAIAdvisorySection(advisories: List<String>) {
 }
 
 @Composable
-private fun FramePerformanceSection(frameState: com.dev.myapplication.domain.FramePerformanceState) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Speed,
-                contentDescription = "Frame Telemetry",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(26.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "UI Frame Render Telemetry", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(
-                    text = "${frameState.currentFps} FPS | ${frameState.frameDurationMs}ms frame time | ${frameState.status}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NetworkStatusSection(networkState: com.dev.myapplication.data.monitor.NetworkState) {
+private fun UnifiedNetworkSection(
+    networkState: com.dev.myapplication.data.monitor.NetworkState,
+    networkInfoState: Resource<com.dev.myapplication.data.remote.NetworkInfoResponse>,
+    onFetchInfo: () -> Unit
+) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -404,77 +637,48 @@ private fun NetworkStatusSection(networkState: com.dev.myapplication.data.monito
                 imageVector = if (networkState.isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = "Network Status",
                 tint = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(32.dp)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Network Connectivity", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = "Network & Location Diagnostics", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
                     text = if (networkState.isConnected) "Connected (${networkState.transportType})" else "Disconnected",
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold
                 )
                 if (networkState.isConnected) {
                     Text(
                         text = "Metered: ${if (networkState.isMetered) "Yes" else "No"} | Downstream: ${networkState.linkDownstreamKbps / 1000} Mbps",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun NetworkApiSection(networkInfoState: Resource<com.dev.myapplication.data.remote.NetworkInfoResponse>, onFetch: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Public,
-                contentDescription = "Network Info API",
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(28.dp)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = "Public IP & Geo Diagnostics",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.weight(1f)
-            )
 
             OutlinedButton(
-                onClick = onFetch,
+                onClick = onFetchInfo,
                 contentPadding = ButtonDefaults.ContentPadding
             ) {
                 Icon(
                     imageVector = Icons.Default.CloudDownload,
-                    contentDescription = "Fetch",
+                    contentDescription = "Fetch IP",
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "Fetch", fontSize = 12.sp)
+                Text(text = "IP Info", fontSize = 11.sp)
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         when (networkInfoState) {
-            is Resource.Idle -> {
-                Text(text = "Tap 'Fetch' to retrieve external network context via Retrofit.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            is Resource.Idle -> { }
             is Resource.Loading -> {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "Querying public network endpoint...", fontSize = 12.sp)
                 }
@@ -484,15 +688,17 @@ private fun NetworkApiSection(networkInfoState: Resource<com.dev.myapplication.d
                 val locationParts = listOfNotNull(info.city, info.region, info.country).filter { it.isNotBlank() }
                 val locationStr = if (locationParts.isNotEmpty()) locationParts.joinToString(", ") else "Global IP Network"
 
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.padding(top = 4.dp)) {
-                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "Location: $locationStr", fontSize = 12.sp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Location: $locationStr", fontSize = 11.sp)
                     if (!info.org.isNull0OrBlank()) {
-                        Text(text = "ISP / Org: ${info.org}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "ISP / Org: ${info.org}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             is Resource.Error -> {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
@@ -500,33 +706,101 @@ private fun NetworkApiSection(networkInfoState: Resource<com.dev.myapplication.d
 }
 
 @Composable
-private fun WorkerTaskSection(workerState: String, onRunTask: () -> Unit) {
+private fun DeveloperDiagnosticsSection(
+    frameState: com.dev.myapplication.domain.FramePerformanceState,
+    workerState: String,
+    onRunWorker: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
         ) {
             Icon(
-                imageVector = Icons.Default.Sync,
-                contentDescription = "WorkManager",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                imageVector = Icons.Default.DeveloperMode,
+                contentDescription = "Developer Telemetry",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Background Worker Task", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(
-                    text = "WorkManager Status: $workerState",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            Text(
+                text = "Developer & System Telemetry",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
 
-            Button(onClick = onRunTask) {
-                Text(text = "Run Task", fontSize = 12.sp)
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = "Expand",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                // Frame Telemetry
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Speed,
+                        contentDescription = "FPS",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(text = "UI Frame Render Telemetry", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            text = "${frameState.currentFps} FPS | ${frameState.frameDurationMs}ms frame time (${frameState.status})",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                // WorkManager
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Worker",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Background Worker Task", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            text = "WorkManager Status: $workerState",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Button(
+                        onClick = onRunWorker,
+                        contentPadding = ButtonDefaults.ContentPadding
+                    ) {
+                        Text(text = "Run Worker", fontSize = 11.sp)
+                    }
+                }
             }
         }
     }

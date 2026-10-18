@@ -68,6 +68,35 @@ class DashboardViewModel @Inject constructor(
         initialValue = anomalyDetector.detectAnomalies(batteryState.value, networkState.value)
     )
 
+    val systemHealthScore: StateFlow<Int> = combine(
+        batteryState,
+        networkState,
+        anomalyState,
+        framePerformanceState
+    ) { bState, nState, aState, fState ->
+        var score = 100
+        if (aState.hasAnomaly) {
+            score -= if (aState.severity == "ALERT") 25 else 15
+        }
+        if (!bState.isCharging && bState.level < 20) {
+            score -= 20
+        }
+        if (bState.temperature > 38f) {
+            score -= 15
+        }
+        if (!nState.isConnected) {
+            score -= 10
+        }
+        if (fState.currentFps in 1..44) {
+            score -= 10
+        }
+        score.coerceIn(5, 100)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 100
+    )
+
     private val _networkInfoState = MutableStateFlow<Resource<NetworkInfoResponse>>(Resource.Idle)
     val networkInfoState: StateFlow<Resource<NetworkInfoResponse>> = _networkInfoState.asStateFlow()
 
