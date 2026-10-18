@@ -165,7 +165,7 @@ fun SettingsScreen(
                         if (checked && context is FragmentActivity) {
                             biometricHelper.promptBiometricAuth(
                                 activity = context,
-                                title = "Authenticate Companion360",
+                                title = "Authenticate PulseMind 360",
                                 subtitle = "Confirm fingerprint/PIN to enable Biometric Vault",
                                 onSuccess = { biometricEnabled = true },
                                 onError = { biometricEnabled = false }
