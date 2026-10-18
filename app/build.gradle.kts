@@ -50,6 +50,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
+    // Biometric Security
+    implementation(libs.androidx.biometric)
+
     // Navigation & Hilt
     implementation(libs.androidx.navigation.compose)
     implementation(libs.hilt.android)

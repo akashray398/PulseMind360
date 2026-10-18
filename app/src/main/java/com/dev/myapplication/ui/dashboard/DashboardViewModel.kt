@@ -13,7 +13,11 @@ import com.dev.myapplication.data.remote.NetworkInfoApi
 import com.dev.myapplication.data.remote.NetworkInfoResponse
 import com.dev.myapplication.data.remote.Resource
 import com.dev.myapplication.data.worker.DeviceSyncWorker
+import com.dev.myapplication.domain.AnomalyDetector
+import com.dev.myapplication.domain.AnomalyReport
 import com.dev.myapplication.domain.AutomationEngine
+import com.dev.myapplication.domain.FramePerformanceMonitor
+import com.dev.myapplication.domain.FramePerformanceState
 import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.domain.SystemInsights
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,12 +36,15 @@ class DashboardViewModel @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val automationEngine: AutomationEngine,
     private val smartInsightsEngine: SmartInsightsEngine,
+    private val anomalyDetector: AnomalyDetector,
+    private val framePerformanceMonitor: FramePerformanceMonitor,
     private val networkInfoApi: NetworkInfoApi,
     private val workManager: WorkManager
 ) : ViewModel() {
 
     val batteryState: StateFlow<BatteryState> = batteryMonitor.batteryState
     val networkState: StateFlow<NetworkState> = networkMonitor.networkState
+    val framePerformanceState: StateFlow<FramePerformanceState> = framePerformanceMonitor.frameState
 
     val insightsState: StateFlow<SystemInsights> = combine(
         batteryState,
@@ -48,6 +55,17 @@ class DashboardViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = smartInsightsEngine.generateInsights(batteryState.value, networkState.value)
+    )
+
+    val anomalyState: StateFlow<AnomalyReport> = combine(
+        batteryState,
+        networkState
+    ) { bState, nState ->
+        anomalyDetector.detectAnomalies(bState, nState)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = anomalyDetector.detectAnomalies(batteryState.value, networkState.value)
     )
 
     private val _networkInfoState = MutableStateFlow<Resource<NetworkInfoResponse>>(Resource.Idle)

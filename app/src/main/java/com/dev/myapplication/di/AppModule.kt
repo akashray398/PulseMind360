@@ -11,9 +11,12 @@ import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.NetworkMonitor
 import com.dev.myapplication.data.remote.NetworkInfoApi
 import com.dev.myapplication.data.repository.UserPreferencesRepository
+import com.dev.myapplication.domain.AnomalyDetector
 import com.dev.myapplication.domain.AutomationEngine
 import com.dev.myapplication.domain.FocusTimerManager
+import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.SmartInsightsEngine
+import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
 import dagger.Module
 import dagger.Provides
@@ -80,6 +83,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideBiometricHelper(@ApplicationContext context: Context): BiometricHelper {
+        return BiometricHelper(context)
+    }
+
+    @Provides
+    @Singleton
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager {
         return WorkManager.getInstance(context)
     }
@@ -118,6 +127,18 @@ object AppModule {
     @Singleton
     fun provideSmartInsightsEngine(): SmartInsightsEngine {
         return SmartInsightsEngine()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAnomalyDetector(): AnomalyDetector {
+        return AnomalyDetector()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFramePerformanceMonitor(): FramePerformanceMonitor {
+        return FramePerformanceMonitor()
     }
 
     @Provides

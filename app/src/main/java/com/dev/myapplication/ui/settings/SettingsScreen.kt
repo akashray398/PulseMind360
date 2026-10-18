@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sync
@@ -45,9 +46,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.ui.components.GlassCard
+import com.dev.myapplication.util.BiometricHelper
 
 @Composable
 fun SettingsScreen(
@@ -55,6 +58,7 @@ fun SettingsScreen(
 ) {
     val prefs by viewModel.userPreferencesState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val biometricHelper = remember { BiometricHelper(context) }
 
     var hasNotificationPerm by remember {
         mutableStateOf(
@@ -75,6 +79,7 @@ fun SettingsScreen(
     }
 
     var showPurgeDialog by remember { mutableStateOf(false) }
+    var biometricEnabled by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
 
@@ -129,6 +134,47 @@ fun SettingsScreen(
                         label = { Text(mode, fontSize = 12.sp) }
                     )
                 }
+            }
+        }
+
+        // Biometric Security Vault Card
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = "Biometric Vault",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Biometric Security Vault", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = if (biometricHelper.isBiometricAvailable()) "Hardware Security Available" else "Biometric Hardware Not Enrolled",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = biometricEnabled,
+                    enabled = biometricHelper.isBiometricAvailable(),
+                    onCheckedChange = { checked ->
+                        if (checked && context is FragmentActivity) {
+                            biometricHelper.promptBiometricAuth(
+                                activity = context,
+                                title = "Authenticate Companion360",
+                                subtitle = "Confirm fingerprint/PIN to enable Biometric Vault",
+                                onSuccess = { biometricEnabled = true },
+                                onError = { biometricEnabled = false }
+                            )
+                        } else {
+                            biometricEnabled = false
+                        }
+                    }
+                )
             }
         }
 
@@ -236,7 +282,19 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
-                onClick = { showPurgeDialog = true },
+                onClick = {
+                    if (biometricEnabled && context is FragmentActivity) {
+                        biometricHelper.promptBiometricAuth(
+                            activity = context,
+                            title = "Purge Vault Confirmation",
+                            subtitle = "Authenticate fingerprint/PIN to purge local logs",
+                            onSuccess = { showPurgeDialog = true },
+                            onError = { }
+                        )
+                    } else {
+                        showPurgeDialog = true
+                    }
+                },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
                 Icon(imageVector = Icons.Default.DeleteForever, contentDescription = "Purge")
