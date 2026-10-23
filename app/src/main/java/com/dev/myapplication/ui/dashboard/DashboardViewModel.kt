@@ -2,9 +2,13 @@ package com.dev.myapplication.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.BatteryState
 import com.dev.myapplication.data.monitor.NetworkMonitor
@@ -129,18 +133,30 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun triggerSyncWorker() {
-        val request = OneTimeWorkRequestBuilder<DeviceSyncWorker>().build()
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = OneTimeWorkRequestBuilder<DeviceSyncWorker>()
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                10,
+                TimeUnit.SECONDS
+            )
+            .build()
+
         workManager.enqueue(request)
 
         viewModelScope.launch {
             workManager.getWorkInfoByIdFlow(request.id).collect { workInfo ->
                 if (workInfo != null) {
                     _workerState.value = when (workInfo.state) {
-                        WorkInfo.State.ENQUEUED -> "ENQUEUED"
-                        WorkInfo.State.RUNNING -> "RUNNING..."
-                        WorkInfo.State.SUCCEEDED -> "SUCCESS"
-                        WorkInfo.State.FAILED -> "FAILED"
-                        WorkInfo.State.BLOCKED -> "BLOCKED"
+                        WorkInfo.State.ENQUEUED -> "ENQUEUED (Backoff Policy Ready)"
+                        WorkInfo.State.RUNNING -> "RUNNING (Flushing Offline Queue...)"
+                        WorkInfo.State.SUCCEEDED -> "SYNC SUCCESS"
+                        WorkInfo.State.FAILED -> "FAILED (Retrying Exponentially)"
+                        WorkInfo.State.BLOCKED -> "BLOCKED (Awaiting Network)"
                         WorkInfo.State.CANCELLED -> "CANCELLED"
                     }
                 }

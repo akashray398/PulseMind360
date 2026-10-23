@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Sync
@@ -52,6 +54,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -63,6 +66,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
@@ -82,10 +86,12 @@ import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
 import com.dev.myapplication.ui.theme.StatusWarning
 import com.dev.myapplication.ui.theme.VioletSecondary
+import com.dev.myapplication.util.MemoryOptimizer
 import com.dev.myapplication.util.ReportGenerator
 
 @Composable
 fun DashboardScreen(
+    onOpenDeskStand: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val batteryState by viewModel.batteryState.collectAsStateWithLifecycle()
@@ -135,7 +141,8 @@ fun DashboardScreen(
                     anomalyReport = anomaly,
                     frameState = frameState
                 )
-            }
+            },
+            onOpenDeskStand = onOpenDeskStand
         )
 
         if (isTabletOrLandscape) {
@@ -148,7 +155,7 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    BatteryMetricsSection(batteryState, insights.timeRemainingEstimate)
+                    BatteryMetricsSection(batteryState, insights)
                     BatteryTrendSection(insights.trendHistory)
                     if (anomaly.hasAnomaly) {
                         AnomalySection(anomaly)
@@ -164,6 +171,7 @@ fun DashboardScreen(
                         networkInfoState = networkInfoState,
                         onFetchInfo = { viewModel.fetchNetworkInfo() }
                     )
+                    MemoryOptimizationSection()
                     DeveloperDiagnosticsSection(
                         frameState = frameState,
                         workerState = workerState,
@@ -173,7 +181,7 @@ fun DashboardScreen(
             }
         } else {
             // Single Column Stack for Phones
-            BatteryMetricsSection(batteryState, insights.timeRemainingEstimate)
+            BatteryMetricsSection(batteryState, insights)
             if (anomaly.hasAnomaly) {
                 AnomalySection(anomaly)
             }
@@ -184,6 +192,7 @@ fun DashboardScreen(
                 networkInfoState = networkInfoState,
                 onFetchInfo = { viewModel.fetchNetworkInfo() }
             )
+            MemoryOptimizationSection()
             DeveloperDiagnosticsSection(
                 frameState = frameState,
                 workerState = workerState,
@@ -459,103 +468,146 @@ private fun SystemHealthHeroCard(
 private fun QuickActionsRow(
     onFetchNetwork: () -> Unit,
     onTriggerSync: () -> Unit,
-    onExportReport: () -> Unit
+    onExportReport: () -> Unit,
+    onOpenDeskStand: () -> Unit
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onFetchNetwork() },
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onFetchNetwork() },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Public,
-                    contentDescription = "IP Context",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "IP Context",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Public,
+                        contentDescription = "IP Context",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "IP Context",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onTriggerSync() },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Run Sync",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Sync Worker",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
 
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onTriggerSync() },
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onExportReport() },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Run Sync",
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Sync Worker",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Assessment,
+                        contentDescription = "Audit PDF",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Export PDF Report",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-        }
 
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onExportReport() },
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onOpenDeskStand() },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Assessment,
-                    contentDescription = "Audit PDF",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Export PDF",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Nightlight,
+                        contentDescription = "Desk Monitor",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Ambient Desk Monitor",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BatteryMetricsSection(batteryState: com.dev.myapplication.data.monitor.BatteryState, estimateStr: String) {
+private fun BatteryMetricsSection(
+    batteryState: com.dev.myapplication.data.monitor.BatteryState,
+    insights: com.dev.myapplication.domain.SystemInsights
+) {
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         hasGlowBorder = batteryState.isCharging
@@ -575,12 +627,33 @@ private fun BatteryMetricsSection(batteryState: com.dev.myapplication.data.monit
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(text = "Battery Metrics", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = "Status: ${batteryState.status}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Power Source: ${batteryState.plugType}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Health: ${batteryState.health}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Temp: ${batteryState.temperature}°C  |  ${batteryState.voltage}mV", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
-                Text(text = "Estimate: $estimateStr", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Battery & Power AI", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (insights.isSmartChargeGuardActive) {
+                        Surface(
+                            color = StatusWarning.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "80% GUARD",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusWarning,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Text(text = "Status: ${batteryState.status} (${batteryState.plugType})", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "Rate Velocity: ${insights.dischargeRatePctPerHour}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Text(text = "Predictive Temp: ${insights.predictiveThermalSlope}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "Estimate: ${insights.timeRemainingEstimate}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
             }
         }
     }
@@ -745,6 +818,79 @@ private fun UnifiedNetworkSection(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun MemoryOptimizationSection() {
+    val context = LocalContext.current
+    var memState by remember { mutableStateOf(MemoryOptimizer.getMemoryState(context)) }
+    var freedMsg by remember { mutableStateOf<String?>(null) }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Memory,
+                contentDescription = "RAM Optimizer",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "RAM & Cache Memory Diagnostic", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                val usedGbStr = "%.1f".format(memState.usedMemMb / 1024f)
+                val totalGbStr = "%.1f".format(memState.totalMemMb / 1024f)
+                Text(
+                    text = "RAM: ${usedGbStr}GB / ${totalGbStr}GB (${memState.usagePct}% Used)",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Button(
+                onClick = {
+                    val freed = MemoryOptimizer.trimMemoryCaches(context)
+                    memState = MemoryOptimizer.getMemoryState(context)
+                    freedMsg = "Freed ${freed} MB cache memory!"
+                },
+                contentPadding = ButtonDefaults.ContentPadding
+            ) {
+                Text(text = "Trim RAM", fontSize = 11.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val progressColor = when {
+            memState.usagePct >= 85 -> StatusError
+            memState.usagePct >= 70 -> StatusWarning
+            else -> StatusGood
+        }
+
+        LinearProgressIndicator(
+            progress = { memState.usagePct / 100f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
+            color = progressColor,
+            trackColor = progressColor.copy(alpha = 0.15f)
+        )
+
+        freedMsg?.let { msg ->
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = msg,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = StatusGood
+            )
         }
     }
 }

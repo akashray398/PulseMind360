@@ -9,7 +9,13 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 ## ✨ Features Overview
 
 ### 📊 1. Real-Time System Dashboard
+- **⚡ RAM & Cache Memory Optimizer:** Inspects `ActivityManager.MemoryInfo` to show real-time RAM allocation (GB Used vs Total) and features a "Trim RAM" action clearing system caches.
+- **📶 Offline Sync Queue with Exponential Backoff:** WorkManager background queue configured with `NetworkType.CONNECTED` constraints and `BackoffPolicy.EXPONENTIAL` for resilient retries.
+- **📲 Home Screen App Widget:** System Health Home Screen Widget displaying System Health Score (`0–100%`), Battery Gauge %, and Network Connectivity State directly on the launcher.
+- **🌙 Ambient Desk Monitor Mode:** Ultra-dark OLED nightstand display with `FLAG_KEEP_SCREEN_ON`, animated digital clock, battery gauge, and live thermal curve for desk/dock charging.
 - **Contextual System Health Score:** Dynamic `0–100%` health score evaluating battery, thermal state, anomalies, network stability, and frame rendering.
+- **🤖 AI Battery Depletion & Thermal Prediction:** Real-time discharge velocity (%/hr), predictive time-to-empty, and thermal slope forecasting.
+- **⚡ 80% Smart Charge Lifespan Guard & Overheat Alarm:** Automated notification triggers when battery reaches 80% while charging or when temperature exceeds 40°C to preserve long-term battery cell health.
 - **📄 Native PDF Audit Report Generator:** Instant 1-tap generation of a formatted 2D PDF Diagnostic Report using `android.graphics.pdf.PdfDocument` and Android `FileProvider` with native Share Intent integration.
 - **Live Battery & Thermal Curves:** Custom Compose Canvas charting showing level (%) and temperature (°C) trends over time with direct data point value labels and gradient fills.
 - **Unified Network & Geo Diagnostics:** Monitors Wi-Fi/Cellular connectivity, metered state, downstream link speeds, and queries public IP & ISP context via Retrofit API.

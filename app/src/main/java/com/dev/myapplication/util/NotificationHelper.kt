@@ -17,6 +17,7 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_ALERTS = "companion_alerts"
         const val CHANNEL_FOCUS = "focus_channel"
         const val CHANNEL_SYNC = "sync_channel"
+        const val CHANNEL_BATTERY_GUARD = "battery_guard_channel"
     }
 
     init {
@@ -49,10 +50,18 @@ class NotificationHelper(private val context: Context) {
                 description = "Notifications for WorkManager background tasks"
             }
 
+            val guardChannel = NotificationChannel(
+                CHANNEL_BATTERY_GUARD,
+                "Smart Charge & Thermal Lifespan Guard",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts for 80% charge limit and thermal overheating protection"
+            }
+
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannels(
-                listOf(alertsChannel, focusChannel, syncChannel)
+                listOf(alertsChannel, focusChannel, syncChannel, guardChannel)
             )
         }
     }
@@ -86,5 +95,24 @@ class NotificationHelper(private val context: Context) {
         try {
             NotificationManagerCompat.from(context).notify(id, builder.build())
         } catch (_: SecurityException) {}
+    }
+
+    fun showSmartChargeGuardNotification(level: Int) {
+        showNotification(
+            id = 8080,
+            channelId = CHANNEL_BATTERY_GUARD,
+            title = "⚡ 80% Smart Charge Limit Reached",
+            message = "Battery reached $level%. Unplug charger to preserve long-term battery health."
+        )
+    }
+
+    fun showThermalOverheatNotification(temp: Float) {
+        val tempStr = "%.1f".format(temp)
+        showNotification(
+            id = 9090,
+            channelId = CHANNEL_BATTERY_GUARD,
+            title = "🔥 High Thermal Overheat Warning",
+            message = "Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety."
+        )
     }
 }

@@ -37,6 +37,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSmartChargeGuardEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setSmartChargeGuardEnabled(enabled)
+        }
+    }
+
+    fun setOverheatAlarmEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setOverheatAlarmEnabled(enabled)
+        }
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setNotificationsEnabled(enabled)

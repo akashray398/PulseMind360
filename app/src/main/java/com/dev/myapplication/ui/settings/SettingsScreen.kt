@@ -17,12 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -192,6 +194,60 @@ fun SettingsScreen(
                 valueRange = 5f..35f,
                 steps = 5
             )
+        }
+
+        // 80% Smart Charge Lifespan Guard Card
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = "Smart Charge Guard",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "80% Smart Charge Guard", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = "Notifies when battery reaches 80% while charging to extend battery health lifespan.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = prefs.smartChargeGuardEnabled,
+                    onCheckedChange = { viewModel.setSmartChargeGuardEnabled(it) }
+                )
+            }
+        }
+
+        // Overheat Thermal Alarm Card
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Whatshot,
+                    contentDescription = "Thermal Alarm",
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Overheat Thermal Alarm (40°C)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = "Triggers an immediate high-priority alert when battery temperature exceeds 40°C.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = prefs.overheatAlarmEnabled,
+                    onCheckedChange = { viewModel.setOverheatAlarmEnabled(it) }
+                )
+            }
         }
 
         // Notification Permission Card

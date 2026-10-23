@@ -17,6 +17,8 @@ data class UserPreferences(
     val themeMode: String = "SYSTEM", // SYSTEM, LIGHT, DARK
     val lowBatteryThreshold: Int = 20,
     val highBatteryThreshold: Int = 80,
+    val smartChargeGuardEnabled: Boolean = true,
+    val overheatAlarmEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
     val syncIntervalMinutes: Int = 15,
     val retentionDays: Int = 30
@@ -28,6 +30,8 @@ class UserPreferencesRepository(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val LOW_BATTERY_THRESHOLD = intPreferencesKey("low_battery_threshold")
         val HIGH_BATTERY_THRESHOLD = intPreferencesKey("high_battery_threshold")
+        val SMART_CHARGE_GUARD = booleanPreferencesKey("smart_charge_guard")
+        val OVERHEAT_ALARM = booleanPreferencesKey("overheat_alarm")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val SYNC_INTERVAL_MINUTES = intPreferencesKey("sync_interval_minutes")
         val RETENTION_DAYS = intPreferencesKey("retention_days")
@@ -39,6 +43,8 @@ class UserPreferencesRepository(private val context: Context) {
                 themeMode = preferences[PreferenceKeys.THEME_MODE] ?: "SYSTEM",
                 lowBatteryThreshold = preferences[PreferenceKeys.LOW_BATTERY_THRESHOLD] ?: 20,
                 highBatteryThreshold = preferences[PreferenceKeys.HIGH_BATTERY_THRESHOLD] ?: 80,
+                smartChargeGuardEnabled = preferences[PreferenceKeys.SMART_CHARGE_GUARD] ?: true,
+                overheatAlarmEnabled = preferences[PreferenceKeys.OVERHEAT_ALARM] ?: true,
                 notificationsEnabled = preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] ?: true,
                 syncIntervalMinutes = preferences[PreferenceKeys.SYNC_INTERVAL_MINUTES] ?: 15,
                 retentionDays = preferences[PreferenceKeys.RETENTION_DAYS] ?: 30
@@ -60,6 +66,18 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setHighBatteryThreshold(threshold: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.HIGH_BATTERY_THRESHOLD] = threshold
+        }
+    }
+
+    suspend fun setSmartChargeGuardEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SMART_CHARGE_GUARD] = enabled
+        }
+    }
+
+    suspend fun setOverheatAlarmEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.OVERHEAT_ALARM] = enabled
         }
     }
 
