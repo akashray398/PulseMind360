@@ -3,7 +3,9 @@ package com.dev.myapplication.util
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -98,21 +100,55 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showSmartChargeGuardNotification(level: Int) {
-        showNotification(
-            id = 8080,
-            channelId = CHANNEL_BATTERY_GUARD,
-            title = "⚡ 80% Smart Charge Limit Reached",
-            message = "Battery reached $level%. Unplug charger to preserve long-term battery health."
+        if (!hasNotificationPermission()) return
+
+        val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "ACTION_EXPORT_PDF_REPORT"
+        }
+        val reportPendingIntent = PendingIntent.getBroadcast(
+            context,
+            101,
+            reportIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_BATTERY_GUARD)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("⚡ 80% Smart Charge Limit Reached")
+            .setContentText("Battery reached $level%. Unplug charger to preserve battery health.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(0, "📄 Export PDF Report", reportPendingIntent)
+
+        try {
+            NotificationManagerCompat.from(context).notify(8080, builder.build())
+        } catch (_: SecurityException) {}
     }
 
     fun showThermalOverheatNotification(temp: Float) {
+        if (!hasNotificationPermission()) return
+
         val tempStr = "%.1f".format(temp)
-        showNotification(
-            id = 9090,
-            channelId = CHANNEL_BATTERY_GUARD,
-            title = "🔥 High Thermal Overheat Warning",
-            message = "Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety."
+        val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = "ACTION_EXPORT_PDF_REPORT"
+        }
+        val reportPendingIntent = PendingIntent.getBroadcast(
+            context,
+            102,
+            reportIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_BATTERY_GUARD)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("🔥 High Thermal Overheat Warning")
+            .setContentText("Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(0, "📄 Export PDF Report", reportPendingIntent)
+
+        try {
+            NotificationManagerCompat.from(context).notify(9090, builder.build())
+        } catch (_: SecurityException) {}
     }
 }

@@ -61,6 +61,14 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_system_health_info" />
         </receiver>
+
+        <receiver
+            android:name=".util.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_EXPORT_PDF_REPORT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

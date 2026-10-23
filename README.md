@@ -32,10 +32,14 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - Real-time logging of system monitor events, anomaly detections, and rule triggers.
 - Persisted locally using an **offline-first Room Database**.
 
-### 🎯 4. Productivity Focus Mode Timer
+### 🎯 4. Productivity Focus Mode & Habit Analytics
 - Dedicated focus session timer with persistence and completed session history.
+- **🔥 Focus Habit Streak & Analytics Card:** Tracks total focus minutes, completed session counts, and consecutive daily productivity streaks (`🔥 4 Day Streak`).
 
-### 🔒 5. Settings & Biometric Security Vault
+### 🔔 5. Interactive System Notification Controls
+- System shade notification banners equipped with interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
+
+### 🔒 6. Settings & Biometric Security Vault
 - **Biometric Authentication:** Secure local vault protected by Android Credential / Biometric Hardware (Fingerprint / PIN).
 - **Theme Customization:** Toggle between Dark, Light, and System Theme modes.
 - **Custom Alert Thresholds:** Low battery notification thresholds and background sync intervals.

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -81,6 +82,9 @@ fun FocusTimerScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+
+        // Focus Habit Streak & Analytics Card
+        FocusAnalyticsCard(sessions = sessions)
 
         // Preset Chips
         Row(
@@ -237,6 +241,79 @@ fun FocusTimerScreen(
                 items(sessions, key = { it.id }) { session ->
                     FocusSessionItem(session = session)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FocusAnalyticsCard(sessions: List<FocusSessionEntity>) {
+    val totalMins = remember(sessions) { sessions.sumOf { it.durationMinutes } }
+    val totalCount = sessions.size
+    val streakDays = remember(sessions) {
+        if (sessions.isEmpty()) 0 else {
+            val dayMillis = 24 * 60 * 60 * 1000L
+            val uniqueDays = sessions.map { it.startTime / dayMillis }.distinct().sortedDescending()
+            var streak = 1
+            for (i in 0 until uniqueDays.size - 1) {
+                if (uniqueDays[i] - uniqueDays[i + 1] == 1L) {
+                    streak++
+                } else {
+                    break
+                }
+            }
+            streak
+        }
+    }
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Whatshot,
+                contentDescription = "Focus Streak",
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Habit & Productivity Streak",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = "$streakDays Day Focus Streak · $totalCount Completed Sessions",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "$totalMins mins", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                Text(text = "TOTAL FOCUS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "$totalCount", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                Text(text = "SESSIONS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "$streakDays days", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.secondary)
+                Text(text = "STREAK", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
