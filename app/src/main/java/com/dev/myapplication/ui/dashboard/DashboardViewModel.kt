@@ -24,6 +24,8 @@ import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.FramePerformanceState
 import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.domain.SystemInsights
+import com.dev.myapplication.util.NetworkThroughputState
+import com.dev.myapplication.util.TrafficInspector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,6 +51,14 @@ class DashboardViewModel @Inject constructor(
     val batteryState: StateFlow<BatteryState> = batteryMonitor.batteryState
     val networkState: StateFlow<NetworkState> = networkMonitor.networkState
     val framePerformanceState: StateFlow<FramePerformanceState> = framePerformanceMonitor.frameState
+
+    val networkThroughputState: StateFlow<NetworkThroughputState> = TrafficInspector
+        .observeNetworkThroughput(1000L)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = NetworkThroughputState()
+        )
 
     val insightsState: StateFlow<SystemInsights> = combine(
         batteryState,

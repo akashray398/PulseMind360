@@ -9,6 +9,8 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 ## ✨ Features Overview
 
 ### 📊 1. Real-Time System Dashboard
+- **🛡️ Android KeyStore AES-256 Encrypted Vault:** Zero-trust security vault using hardware-backed `AndroidKeyStore` AES/GCM/NoPadding encryption for local biometric credentials & token protection.
+- **📶 Network Bandwidth & Traffic Inspector:** Real-time upload/download speed gauge (KB/s & MB/s) and session data consumption counter via native `android.net.TrafficStats`.
 - **⚡ RAM & Cache Memory Optimizer:** Inspects `ActivityManager.MemoryInfo` to show real-time RAM allocation (GB Used vs Total) and features a "Trim RAM" action clearing system caches.
 - **📶 Offline Sync Queue with Exponential Backoff:** WorkManager background queue configured with `NetworkType.CONNECTED` constraints and `BackoffPolicy.EXPONENTIAL` for resilient retries.
 - **📲 Home Screen App Widget:** System Health Home Screen Widget displaying System Health Score (`0–100%`), Battery Gauge %, and Network Connectivity State directly on the launcher.

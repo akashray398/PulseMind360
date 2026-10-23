@@ -53,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.ui.components.GlassCard
 import com.dev.myapplication.util.BiometricHelper
+import com.dev.myapplication.util.KeystoreVaultManager
 
 @Composable
 fun SettingsScreen(
@@ -140,6 +141,8 @@ fun SettingsScreen(
         }
 
         // Biometric Security Vault Card
+        var vaultTestResult by remember { mutableStateOf<String?>(null) }
+
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -154,7 +157,7 @@ fun SettingsScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = "Biometric Security Vault", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = if (biometricHelper.isBiometricAvailable()) "Hardware Security Available" else "Biometric Hardware Not Enrolled",
+                        text = if (biometricHelper.isBiometricAvailable()) "Android KeyStore AES-256 Protected" else "Biometric Hardware Not Enrolled",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -177,6 +180,31 @@ fun SettingsScreen(
                         }
                     }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = {
+                    val sampleSecret = "PulseMind_Vault_Secret_${System.currentTimeMillis()}"
+                    val payload = KeystoreVaultManager.encrypt(sampleSecret)
+                    val decrypted = KeystoreVaultManager.decrypt(payload)
+                    vaultTestResult = if (decrypted == sampleSecret) {
+                        "AES-256 KeyStore Verified! Cipher: ${payload.encryptedBase64.take(16)}..."
+                    } else {
+                        "KeyStore Encryption Failed"
+                    }
+                },
+                contentPadding = ButtonDefaults.ContentPadding
+            ) {
+                Icon(imageVector = Icons.Default.Security, contentDescription = "KeyStore Test")
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Test KeyStore Encryption", fontSize = 12.sp)
+            }
+
+            vaultTestResult?.let { result ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = result, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
 

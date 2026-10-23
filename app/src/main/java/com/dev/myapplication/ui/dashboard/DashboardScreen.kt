@@ -32,6 +32,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -45,6 +47,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
@@ -87,6 +90,7 @@ import com.dev.myapplication.ui.theme.StatusGood
 import com.dev.myapplication.ui.theme.StatusWarning
 import com.dev.myapplication.ui.theme.VioletSecondary
 import com.dev.myapplication.util.MemoryOptimizer
+import com.dev.myapplication.util.NetworkThroughputState
 import com.dev.myapplication.util.ReportGenerator
 
 @Composable
@@ -102,6 +106,7 @@ fun DashboardScreen(
     val networkInfoState by viewModel.networkInfoState.collectAsStateWithLifecycle()
     val workerState by viewModel.workerState.collectAsStateWithLifecycle()
     val healthScore by viewModel.systemHealthScore.collectAsStateWithLifecycle()
+    val throughputState by viewModel.networkThroughputState.collectAsStateWithLifecycle()
 
     val configuration = LocalConfiguration.current
     val isTabletOrLandscape = configuration.screenWidthDp >= 600
@@ -166,6 +171,7 @@ fun DashboardScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     SmartAIAdvisorySection(insights.healthAdvisories)
+                    NetworkTrafficInspectorSection(throughputState)
                     UnifiedNetworkSection(
                         networkState = networkState,
                         networkInfoState = networkInfoState,
@@ -187,6 +193,7 @@ fun DashboardScreen(
             }
             BatteryTrendSection(insights.trendHistory)
             SmartAIAdvisorySection(insights.healthAdvisories)
+            NetworkTrafficInspectorSection(throughputState)
             UnifiedNetworkSection(
                 networkState = networkState,
                 networkInfoState = networkInfoState,
@@ -817,6 +824,97 @@ private fun UnifiedNetworkSection(
             is Resource.Error -> {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NetworkTrafficInspectorSection(throughputState: com.dev.myapplication.util.NetworkThroughputState) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.SwapVert,
+                contentDescription = "Traffic Inspector",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Live Network Bandwidth", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (throughputState.isHighBandwidthActive) {
+                        Surface(
+                            color = StatusWarning.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "HIGH TRAFFIC",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusWarning,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                val dlSpeedStr = if (throughputState.downloadKbps >= 1024f) {
+                    "%.1f MB/s".format(throughputState.downloadKbps / 1024f)
+                } else {
+                    "%.0f KB/s".format(throughputState.downloadKbps)
+                }
+
+                val ulSpeedStr = if (throughputState.uploadKbps >= 1024f) {
+                    "%.1f MB/s".format(throughputState.uploadKbps / 1024f)
+                } else {
+                    "%.0f KB/s".format(throughputState.uploadKbps)
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDownward,
+                            contentDescription = "Download Speed",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "DL: $dlSpeedStr", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowUpward,
+                            contentDescription = "Upload Speed",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "UL: $ulSpeedStr", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+
+                Text(
+                    text = "Session Data: ${"%.1f".format(throughputState.totalRxMb)} MB Rx · ${"%.1f".format(throughputState.totalTxMb)} MB Tx",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
     }
