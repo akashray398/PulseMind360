@@ -10,6 +10,7 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 
 ### 📊 1. Real-Time System Dashboard
 - **Contextual System Health Score:** Dynamic `0–100%` health score evaluating battery, thermal state, anomalies, network stability, and frame rendering.
+- **📄 Native PDF Audit Report Generator:** Instant 1-tap generation of a formatted 2D PDF Diagnostic Report using `android.graphics.pdf.PdfDocument` and Android `FileProvider` with native Share Intent integration.
 - **Live Battery & Thermal Curves:** Custom Compose Canvas charting showing level (%) and temperature (°C) trends over time with direct data point value labels and gradient fills.
 - **Unified Network & Geo Diagnostics:** Monitors Wi-Fi/Cellular connectivity, metered state, downstream link speeds, and queries public IP & ISP context via Retrofit API.
 - **Smart AI System Advisories:** Contextual health recommendations based on live system diagnostics.

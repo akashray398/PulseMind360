@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bolt
@@ -66,6 +67,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -80,6 +82,7 @@ import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
 import com.dev.myapplication.ui.theme.StatusWarning
 import com.dev.myapplication.ui.theme.VioletSecondary
+import com.dev.myapplication.util.ReportGenerator
 
 @Composable
 fun DashboardScreen(
@@ -119,9 +122,20 @@ fun DashboardScreen(
         )
 
         // Quick Action Chips Row
+        val context = LocalContext.current
         QuickActionsRow(
             onFetchNetwork = { viewModel.fetchNetworkInfo() },
-            onTriggerSync = { viewModel.triggerSyncWorker() }
+            onTriggerSync = { viewModel.triggerSyncWorker() },
+            onExportReport = {
+                ReportGenerator.generateAndSharePdfReport(
+                    context = context,
+                    healthScore = healthScore,
+                    batteryState = batteryState,
+                    networkState = networkState,
+                    anomalyReport = anomaly,
+                    frameState = frameState
+                )
+            }
         )
 
         if (isTabletOrLandscape) {
@@ -444,10 +458,11 @@ private fun SystemHealthHeroCard(
 @Composable
 private fun QuickActionsRow(
     onFetchNetwork: () -> Unit,
-    onTriggerSync: () -> Unit
+    onTriggerSync: () -> Unit,
+    onExportReport: () -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Surface(
@@ -461,18 +476,18 @@ private fun QuickActionsRow(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Public,
                     contentDescription = "IP Context",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "IP Diagnostics",
-                    fontSize = 12.sp,
+                    text = "IP Context",
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -490,20 +505,49 @@ private fun QuickActionsRow(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Sync,
                     contentDescription = "Run Sync",
                     tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Sync Worker",
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onExportReport() },
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Assessment,
+                    contentDescription = "Audit PDF",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Export PDF",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
