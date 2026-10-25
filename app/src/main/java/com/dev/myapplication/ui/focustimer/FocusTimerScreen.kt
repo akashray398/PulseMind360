@@ -2,6 +2,7 @@ package com.dev.myapplication.ui.focustimer
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +28,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -61,7 +63,8 @@ import com.dev.myapplication.data.local.entity.FocusSessionEntity
 import com.dev.myapplication.ui.components.GlassCard
 import com.dev.myapplication.ui.theme.CyanPrimary
 import com.dev.myapplication.ui.theme.FuturisticGradient
-import com.dev.myapplication.ui.theme.VioletSecondary
+import com.dev.myapplication.ui.theme.StatusGood
+import com.dev.myapplication.ui.theme.StatusWarning
 import com.dev.myapplication.util.FocusSoundEngine
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -130,196 +133,30 @@ fun FocusTimerScreen(
             FocusWeeklyBarChart(sessions = sessions)
         }
 
-        // Custom Duration & Presets Card
+        // Timer Setup & Ambient Audio Configuration Card
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Timer Duration & Ambient Audio",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Preset Chips
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    presets.forEach { (mins, label) ->
-                        val isSelected = timerState.totalSeconds == mins * 60 && !timerState.isRunning
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                customDurationMins = mins.toFloat()
-                                viewModel.selectPreset(mins, label)
-                            },
-                            label = { Text("${mins}m", fontSize = 11.sp) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Custom Duration: ${customDurationMins.toInt()} mins",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Slider(
-                    value = customDurationMins,
-                    onValueChange = {
-                        customDurationMins = it
-                        val mins = it.toInt()
-                        viewModel.selectPreset(mins, "Custom Focus (${mins}m)")
-                    },
-                    valueRange = 5f..120f,
-                    steps = 22
-                )
-
-                // Ambient Audio Generator Chips
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = "Ambient Sound",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text("Ambient Sound:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-
-                    listOf("OFF" to "Off", "RAIN" to "🌧️ Rain", "CYBER" to "⚡ Cyber").forEach { (type, label) ->
-                        FilterChip(
-                            selected = selectedSound == type,
-                            onClick = { selectedSound = type },
-                            label = { Text(label, fontSize = 11.sp) }
-                        )
-                    }
-                }
-            }
+            TimerConfigurationCard(
+                presets = presets,
+                totalSeconds = timerState.totalSeconds,
+                isRunning = timerState.isRunning,
+                customDurationMins = customDurationMins,
+                selectedSound = selectedSound,
+                onSelectPreset = { mins, label -> viewModel.selectPreset(mins, label) },
+                onCustomDurationChange = { customDurationMins = it },
+                onSelectSound = { selectedSound = it }
+            )
         }
 
-        // Circular Timer Gauge Card
+        // Circular Pomodoro Timer Gauge Card
         item {
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                hasGlowBorder = timerState.isRunning
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = timerState.currentPresetLabel,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Animated Circular Progress Indicator
-                    val progress = if (timerState.totalSeconds > 0) {
-                        timerState.remainingSeconds.toFloat() / timerState.totalSeconds
-                    } else 0f
-
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = progress,
-                        animationSpec = tween(durationMillis = 500),
-                        label = "TimerProgress"
-                    )
-
-                    val outlineColor = MaterialTheme.colorScheme.outline
-                    val primaryColor = MaterialTheme.colorScheme.primary
-
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(190.dp)
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val stroke = 12.dp.toPx()
-                            drawArc(
-                                color = outlineColor.copy(alpha = 0.2f),
-                                startAngle = -90f,
-                                sweepAngle = 360f,
-                                useCenter = false,
-                                style = Stroke(width = stroke)
-                            )
-                            drawArc(
-                                brush = FuturisticGradient,
-                                startAngle = -90f,
-                                sweepAngle = 360f * animatedProgress,
-                                useCenter = false,
-                                style = Stroke(width = stroke, cap = StrokeCap.Round)
-                            )
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            val mins = timerState.remainingSeconds / 60
-                            val secs = timerState.remainingSeconds % 60
-                            val timeFormatted = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
-
-                            Text(
-                                text = timeFormatted,
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (timerState.isCompleted) {
-                                Text(
-                                    text = "COMPLETED!",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Timer Controls
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!timerState.isRunning) {
-                            Button(
-                                onClick = { viewModel.startTimer() },
-                                colors = ButtonDefaults.buttonColors(containerColor = primaryColor)
-                            ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Start")
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Start Focus")
-                            }
-                        } else if (timerState.isPaused) {
-                            Button(
-                                onClick = { viewModel.resumeTimer() }
-                            ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Resume")
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Resume")
-                            }
-                        } else {
-                            Button(
-                                onClick = { viewModel.pauseTimer() }
-                            ) {
-                                Icon(imageVector = Icons.Default.Pause, contentDescription = "Pause")
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Pause")
-                            }
-                        }
-
-                        OutlinedButton(onClick = { viewModel.resetTimer() }) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reset")
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Reset")
-                        }
-                    }
-                }
-            }
+            PomodoroTimerCard(
+                timerState = timerState,
+                selectedSound = selectedSound,
+                onStart = { viewModel.startTimer() },
+                onPause = { viewModel.pauseTimer() },
+                onResume = { viewModel.resumeTimer() },
+                onReset = { viewModel.resetTimer() }
+            )
         }
 
         // Recent Completed Sessions List
@@ -342,6 +179,306 @@ fun FocusTimerScreen(
         } else {
             items(sessions, key = { it.id }) { session ->
                 FocusSessionItem(session = session)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimerConfigurationCard(
+    presets: List<Pair<Int, String>>,
+    totalSeconds: Int,
+    isRunning: Boolean,
+    customDurationMins: Float,
+    selectedSound: String,
+    onSelectPreset: (Int, String) -> Unit,
+    onCustomDurationChange: (Float) -> Unit,
+    onSelectSound: (String) -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Timer & Ambient Setup",
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Preset Duration Chips Row (Equal Width 3 Buttons)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            presets.forEach { (mins, label) ->
+                val isSelected = totalSeconds == mins * 60 && !isRunning
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            onCustomDurationChange(mins.toFloat())
+                            onSelectPreset(mins, label)
+                        },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = "${mins}m",
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .padding(vertical = 10.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Custom Duration",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "${customDurationMins.toInt()} mins",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Slider(
+            value = customDurationMins,
+            onValueChange = {
+                onCustomDurationChange(it)
+                val mins = it.toInt()
+                onSelectPreset(mins, "Custom Focus (${mins}m)")
+            },
+            valueRange = 5f..120f,
+            steps = 22
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+        // Ambient Sound Selector (Equal Width 3 Buttons)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.GraphicEq,
+                contentDescription = "Ambient Sound",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Ambient Sound Generator",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            listOf("OFF" to "Off", "RAIN" to "🌧️ Rain", "CYBER" to "⚡ Cyber").forEach { (type, label) ->
+                val isSelected = selectedSound == type
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onSelectSound(type) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .padding(vertical = 10.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PomodoroTimerCard(
+    timerState: com.dev.myapplication.domain.FocusTimerState,
+    selectedSound: String,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onReset: () -> Unit
+) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        hasGlowBorder = timerState.isRunning
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Status Header Badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = timerState.currentPresetLabel,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                val (badgeBg, badgeText, badgeColor) = when {
+                    timerState.isCompleted -> Triple(MaterialTheme.colorScheme.primaryContainer, "COMPLETED", MaterialTheme.colorScheme.primary)
+                    timerState.isRunning && !timerState.isPaused -> Triple(StatusGood.copy(alpha = 0.15f), "DEEP FOCUS", StatusGood)
+                    timerState.isPaused -> Triple(StatusWarning.copy(alpha = 0.15f), "PAUSED", StatusWarning)
+                    else -> Triple(MaterialTheme.colorScheme.surfaceVariant, "READY", MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                Surface(
+                    color = badgeBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = badgeColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Animated Circular Timer Progress Indicator
+            val progress = if (timerState.totalSeconds > 0) {
+                timerState.remainingSeconds.toFloat() / timerState.totalSeconds
+            } else 0f
+
+            val animatedProgress by animateFloatAsState(
+                targetValue = progress,
+                animationSpec = tween(durationMillis = 500),
+                label = "TimerProgress"
+            )
+
+            val outlineColor = MaterialTheme.colorScheme.outline
+            val primaryColor = MaterialTheme.colorScheme.primary
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(200.dp)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val stroke = 12.dp.toPx()
+                    drawArc(
+                        color = outlineColor.copy(alpha = 0.18f),
+                        startAngle = -90f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = stroke)
+                    )
+                    drawArc(
+                        brush = FuturisticGradient,
+                        startAngle = -90f,
+                        sweepAngle = 360f * animatedProgress,
+                        useCenter = false,
+                        style = Stroke(width = stroke, cap = StrokeCap.Round)
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val mins = timerState.remainingSeconds / 60
+                    val secs = timerState.remainingSeconds % 60
+                    val timeFormatted = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+
+                    Text(
+                        text = timeFormatted,
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        letterSpacing = 1.sp
+                    )
+                    if (selectedSound != "OFF") {
+                        Text(
+                            text = "🎵 Ambient Audio Active",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Timer Control Action Buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!timerState.isRunning) {
+                    Button(
+                        onClick = onStart,
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Start")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Start Focus", fontWeight = FontWeight.Bold)
+                    }
+                } else if (timerState.isPaused) {
+                    Button(
+                        onClick = onResume,
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Resume")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Resume", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Button(
+                        onClick = onPause,
+                        modifier = Modifier.height(42.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Pause, contentDescription = "Pause")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Pause", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onReset,
+                    modifier = Modifier.height(42.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reset")
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Reset")
+                }
             }
         }
     }
