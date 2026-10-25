@@ -15,7 +15,7 @@ import com.dev.myapplication.data.local.entity.FocusSessionEntity
         AutomationRuleEntity::class,
         FocusSessionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

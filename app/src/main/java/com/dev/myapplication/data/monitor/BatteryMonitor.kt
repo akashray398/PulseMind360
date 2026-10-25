@@ -31,9 +31,11 @@ class BatteryMonitor(private val context: Context) {
     }
 
     init {
-        val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val initialIntent = context.registerReceiver(receiver, intentFilter)
-        initialIntent?.let { updateStateFromIntent(it) }
+        try {
+            val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            val initialIntent = context.registerReceiver(receiver, intentFilter)
+            initialIntent?.let { updateStateFromIntent(it) }
+        } catch (_: Exception) {}
     }
 
     private fun updateStateFromIntent(intent: Intent) {

@@ -11,6 +11,11 @@ import com.dev.myapplication.data.monitor.NetworkState
 import com.dev.myapplication.data.worker.DeviceSyncWorker
 import com.dev.myapplication.util.NotificationHelper
 
+data class EvaluationSummary(
+    val activeRulesCount: Int,
+    val triggeredRulesCount: Int
+)
+
 class AutomationEngine(
     private val automationRuleDao: AutomationRuleDao,
     private val activityLogDao: ActivityLogDao,
@@ -27,8 +32,9 @@ class AutomationEngine(
     suspend fun evaluateRules(
         batteryState: BatteryState,
         networkState: NetworkState
-    ) {
+    ): EvaluationSummary {
         val currentTime = System.currentTimeMillis()
+        var triggeredCount = 0
 
         // 1. Evaluate Smart Charge Lifespan Guard (80% Alarm)
         if (batteryState.isCharging && batteryState.level >= 80) {
@@ -73,8 +79,14 @@ class AutomationEngine(
             if (isConditionMet) {
                 executeRule(rule)
                 automationRuleDao.updateLastTriggered(rule.id, currentTime)
+                triggeredCount++
             }
         }
+
+        return EvaluationSummary(
+            activeRulesCount = activeRules.size,
+            triggeredRulesCount = triggeredCount
+        )
     }
 
     private fun checkCondition(

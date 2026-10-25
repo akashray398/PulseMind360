@@ -14,5 +14,6 @@ data class AutomationRuleEntity(
     val actionTarget: String = "",
     val isEnabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
-    val lastTriggeredAt: Long = 0L
+    val lastTriggeredAt: Long = 0L,
+    val triggerCount: Int = 0
 )

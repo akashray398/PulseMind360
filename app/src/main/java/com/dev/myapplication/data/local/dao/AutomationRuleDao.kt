@@ -29,7 +29,7 @@ interface AutomationRuleDao {
     @Query("UPDATE automation_rules SET isEnabled = :isEnabled WHERE id = :id")
     suspend fun updateRuleStatus(id: Long, isEnabled: Boolean)
 
-    @Query("UPDATE automation_rules SET lastTriggeredAt = :timestamp WHERE id = :id")
+    @Query("UPDATE automation_rules SET lastTriggeredAt = :timestamp, triggerCount = triggerCount + 1 WHERE id = :id")
     suspend fun updateLastTriggered(id: Long, timestamp: Long)
 
     @Delete

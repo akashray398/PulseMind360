@@ -1,5 +1,8 @@
 package com.dev.myapplication.ui.automation
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,14 +12,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SignalCellularConnectedNoInternet4Bar
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -24,12 +36,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +62,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.data.local.entity.AutomationRuleEntity
 import com.dev.myapplication.ui.components.GlassCard
+import com.dev.myapplication.ui.theme.StatusGood
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,24 +73,36 @@ fun AutomationScreen(
     viewModel: AutomationViewModel = hiltViewModel()
 ) {
     val rules by viewModel.rulesState.collectAsStateWithLifecycle()
+    val feedback by viewModel.evaluationFeedback.collectAsStateWithLifecycle()
+
     var showAddDialog by remember { mutableStateOf(false) }
+    var selectedCategoryFilter by remember { mutableStateOf("ALL") } // ALL, BATTERY, NETWORK
+
+    val filteredRules = remember(rules, selectedCategoryFilter) {
+        when (selectedCategoryFilter) {
+            "BATTERY" -> rules.filter { it.conditionType.contains("BATTERY") || it.conditionType.contains("CHARGING") }
+            "NETWORK" -> rules.filter { it.conditionType.contains("NETWORK") }
+            else -> rules
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Header Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 12.dp)
-            ) {
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp)
+                ) {
                     Text(
                         text = "AUTOMATION ENGINE",
                         fontSize = 22.sp,
@@ -95,7 +122,91 @@ fun AutomationScreen(
                 }
             }
 
-            if (rules.isEmpty()) {
+            // Live Engine Evaluation Feedback Banner
+            feedback?.let { msg ->
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    hasGlowBorder = true
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Feedback",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = msg,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.clearFeedback() }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            // One-Tap Smart Automation Recipes Bar
+            Text(
+                text = "1-Click Smart Automation Recipes",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                item {
+                    RecipeChip(
+                        title = "Low Battery Saver",
+                        subtitle = "IF Battery <= 15% Alert",
+                        icon = Icons.Default.BatteryAlert,
+                        onClick = { viewModel.addPresetRecipe("LOW_BATTERY") }
+                    )
+                }
+                item {
+                    RecipeChip(
+                        title = "Wi-Fi Sync Guard",
+                        subtitle = "IF Wi-Fi -> Trigger Sync",
+                        icon = Icons.Default.Wifi,
+                        onClick = { viewModel.addPresetRecipe("WIFI_SYNC") }
+                    )
+                }
+                item {
+                    RecipeChip(
+                        title = "Charging Alert",
+                        subtitle = "IF Charging Started",
+                        icon = Icons.Default.Bolt,
+                        onClick = { viewModel.addPresetRecipe("CHARGING_ALERT") }
+                    )
+                }
+                item {
+                    RecipeChip(
+                        title = "Offline Event Log",
+                        subtitle = "IF Disconnected -> Log",
+                        icon = Icons.Default.SignalCellularConnectedNoInternet4Bar,
+                        onClick = { viewModel.addPresetRecipe("OFFLINE_LOG") }
+                    )
+                }
+            }
+
+            // Category Filter Chips
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("ALL" to "All Rules", "BATTERY" to "Battery Rules", "NETWORK" to "Network Rules").forEach { (type, label) ->
+                    FilterChip(
+                        selected = selectedCategoryFilter == type,
+                        onClick = { selectedCategoryFilter = type },
+                        label = { Text(label, fontSize = 11.sp) }
+                    )
+                }
+            }
+
+            if (filteredRules.isEmpty()) {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -108,24 +219,24 @@ fun AutomationScreen(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text(
-                            text = "No Automation Rules Created",
+                            text = "No Automation Rules Found",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Tap '+' to create contextual battery/network rules.",
-                            fontSize = 10.sp,
+                            text = "Tap a 1-Click Recipe above or '+' to create a rule.",
+                            fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(rules, key = { it.id }) { rule ->
+                    items(filteredRules, key = { it.id }) { rule ->
                         AutomationRuleItem(
                             rule = rule,
                             onToggle = { viewModel.toggleRule(rule) },
@@ -159,6 +270,38 @@ fun AutomationScreen(
 }
 
 @Composable
+fun RecipeChip(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = subtitle, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
 fun AutomationRuleItem(
     rule: AutomationRuleEntity,
     onToggle: () -> Unit,
@@ -179,12 +322,24 @@ fun AutomationRuleItem(
                     .weight(1f)
                     .padding(end = 12.dp)
             ) {
-                Text(
-                    text = rule.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(
+                                color = if (rule.isEnabled) StatusGood else MaterialTheme.colorScheme.outline,
+                                shape = CircleShape
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = rule.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = "IF: ${rule.conditionType} (${rule.conditionValue})",
                     fontSize = 12.sp,
@@ -196,12 +351,25 @@ fun AutomationRuleItem(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.secondary
                 )
-                if (rule.lastTriggeredAt > 0) {
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
                     Text(
-                        text = "Last triggered: ${dateFormat.format(Date(rule.lastTriggeredAt))}",
+                        text = "⚡ Triggered ${rule.triggerCount} times",
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    if (rule.lastTriggeredAt > 0) {
+                        Text(
+                            text = "Last: ${dateFormat.format(Date(rule.lastTriggeredAt))}",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
