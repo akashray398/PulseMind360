@@ -37,6 +37,9 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 ### 🎯 4. Productivity Focus Mode & Habit Analytics
 - Dedicated focus session timer with persistence and completed session history.
 - **🔥 Focus Habit Streak & Analytics Card:** Tracks total focus minutes, completed session counts, and consecutive daily productivity streaks (`🔥 4 Day Streak`).
+- **📊 7-Day Weekly Focus Bar Chart:** Custom Compose Canvas bar chart mapping focus minutes logged per day over the past week (Mon–Sun).
+- **🎵 Ambient Focus Audio Generator:** Built-in PCM acoustic generator (`Rain White Noise` & `Cyber Binaural Pulse`) powered by `AudioTrack`—100% offline with zero MP3 assets.
+- **🎯 Custom Duration Slider:** Interactive slider setting custom focus durations from 5m up to 120m.
 
 ### 🔔 5. Interactive System Notification Controls
 - System shade notification banners equipped with interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
