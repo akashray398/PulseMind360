@@ -82,7 +82,6 @@ fun SettingsScreen(
     }
 
     var showPurgeDialog by remember { mutableStateOf(false) }
-    var biometricEnabled by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
 
@@ -157,26 +156,27 @@ fun SettingsScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = "Biometric Security Vault", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
-                        text = if (biometricHelper.isBiometricAvailable()) "Android KeyStore AES-256 Protected" else "Biometric Hardware Not Enrolled",
+                        text = if (prefs.biometricVaultEnabled) "VAULT LOCKED (AES-256 KeyStore Protected)" else if (biometricHelper.isBiometricAvailable()) "Biometric Hardware Ready" else "Biometric Hardware Not Enrolled",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (prefs.biometricVaultEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (prefs.biometricVaultEnabled) FontWeight.Bold else FontWeight.Normal
                     )
                 }
 
                 Switch(
-                    checked = biometricEnabled,
+                    checked = prefs.biometricVaultEnabled,
                     enabled = biometricHelper.isBiometricAvailable(),
                     onCheckedChange = { checked ->
-                        if (checked && context is FragmentActivity) {
+                        if (context is FragmentActivity) {
                             biometricHelper.promptBiometricAuth(
                                 activity = context,
-                                title = "Authenticate PulseMind 360",
-                                subtitle = "Confirm fingerprint/PIN to enable Biometric Vault",
-                                onSuccess = { biometricEnabled = true },
-                                onError = { biometricEnabled = false }
+                                title = if (checked) "Enable Biometric Security Vault" else "Disable Biometric Security Vault",
+                                subtitle = "Confirm fingerprint/PIN authentication",
+                                onSuccess = { viewModel.setBiometricVaultEnabled(checked) },
+                                onError = { viewModel.setBiometricVaultEnabled(!checked) }
                             )
                         } else {
-                            biometricEnabled = false
+                            viewModel.setBiometricVaultEnabled(checked)
                         }
                     }
                 )
@@ -186,13 +186,27 @@ fun SettingsScreen(
 
             OutlinedButton(
                 onClick = {
-                    val sampleSecret = "PulseMind_Vault_Secret_${System.currentTimeMillis()}"
-                    val payload = KeystoreVaultManager.encrypt(sampleSecret)
-                    val decrypted = KeystoreVaultManager.decrypt(payload)
-                    vaultTestResult = if (decrypted == sampleSecret) {
-                        "AES-256 KeyStore Verified! Cipher: ${payload.encryptedBase64.take(16)}..."
+                    fun executeTest() {
+                        val sampleSecret = "PulseMind_Vault_Secret_${System.currentTimeMillis()}"
+                        val payload = KeystoreVaultManager.encrypt(sampleSecret)
+                        val decrypted = KeystoreVaultManager.decrypt(payload)
+                        vaultTestResult = if (decrypted == sampleSecret) {
+                            "AES-256 KeyStore Verified! Cipher: ${payload.encryptedBase64.take(16)}..."
+                        } else {
+                            "KeyStore Encryption Failed"
+                        }
+                    }
+
+                    if (prefs.biometricVaultEnabled && context is FragmentActivity) {
+                        biometricHelper.promptBiometricAuth(
+                            activity = context,
+                            title = "Authorize KeyStore Vault Test",
+                            subtitle = "Scan fingerprint/PIN to test AES-256 hardware vault",
+                            onSuccess = { executeTest() },
+                            onError = { vaultTestResult = "Authentication failed: KeyStore access denied." }
+                        )
                     } else {
-                        "KeyStore Encryption Failed"
+                        executeTest()
                     }
                 },
                 contentPadding = ButtonDefaults.ContentPadding
@@ -367,7 +381,7 @@ fun SettingsScreen(
 
             OutlinedButton(
                 onClick = {
-                    if (biometricEnabled && context is FragmentActivity) {
+                    if (prefs.biometricVaultEnabled && context is FragmentActivity) {
                         biometricHelper.promptBiometricAuth(
                             activity = context,
                             title = "Purge Vault Confirmation",

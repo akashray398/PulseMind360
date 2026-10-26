@@ -49,6 +49,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setBiometricVaultEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setBiometricVaultEnabled(enabled)
+        }
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setNotificationsEnabled(enabled)

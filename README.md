@@ -46,6 +46,7 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - **System Shade Action Controls:** Notification banners equipped with interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
 
 ### 🔒 6. Settings & Biometric Security Vault
+- **🔒 Persistent Real-Time Biometric Vault:** Fingerprint/PIN authentication persisted via DataStore; enforces real-time biometric verification before purging data or running KeyStore tests.
 - **Biometric Authentication:** Secure local vault protected by Android Credential / Biometric Hardware (Fingerprint / PIN).
 - **Theme Customization:** Toggle between Dark, Light, and System Theme modes.
 - **Custom Alert Thresholds:** Low battery notification thresholds and background sync intervals.

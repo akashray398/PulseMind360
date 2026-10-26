@@ -19,6 +19,7 @@ data class UserPreferences(
     val highBatteryThreshold: Int = 80,
     val smartChargeGuardEnabled: Boolean = true,
     val overheatAlarmEnabled: Boolean = true,
+    val biometricVaultEnabled: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val syncIntervalMinutes: Int = 15,
     val retentionDays: Int = 30
@@ -32,6 +33,7 @@ class UserPreferencesRepository(private val context: Context) {
         val HIGH_BATTERY_THRESHOLD = intPreferencesKey("high_battery_threshold")
         val SMART_CHARGE_GUARD = booleanPreferencesKey("smart_charge_guard")
         val OVERHEAT_ALARM = booleanPreferencesKey("overheat_alarm")
+        val BIOMETRIC_VAULT_ENABLED = booleanPreferencesKey("biometric_vault_enabled")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val SYNC_INTERVAL_MINUTES = intPreferencesKey("sync_interval_minutes")
         val RETENTION_DAYS = intPreferencesKey("retention_days")
@@ -45,6 +47,7 @@ class UserPreferencesRepository(private val context: Context) {
                 highBatteryThreshold = preferences[PreferenceKeys.HIGH_BATTERY_THRESHOLD] ?: 80,
                 smartChargeGuardEnabled = preferences[PreferenceKeys.SMART_CHARGE_GUARD] ?: true,
                 overheatAlarmEnabled = preferences[PreferenceKeys.OVERHEAT_ALARM] ?: true,
+                biometricVaultEnabled = preferences[PreferenceKeys.BIOMETRIC_VAULT_ENABLED] ?: false,
                 notificationsEnabled = preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] ?: true,
                 syncIntervalMinutes = preferences[PreferenceKeys.SYNC_INTERVAL_MINUTES] ?: 15,
                 retentionDays = preferences[PreferenceKeys.RETENTION_DAYS] ?: 30
@@ -78,6 +81,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setOverheatAlarmEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.OVERHEAT_ALARM] = enabled
+        }
+    }
+
+    suspend fun setBiometricVaultEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.BIOMETRIC_VAULT_ENABLED] = enabled
         }
     }
 
