@@ -7,10 +7,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.dev.myapplication.MainActivity
 import com.dev.myapplication.R
 
 class NotificationHelper(private val context: Context) {
@@ -34,6 +36,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for battery alerts and automated rules"
+                enableVibration(true)
             }
 
             val focusChannel = NotificationChannel(
@@ -58,6 +61,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Alerts for 80% charge limit and thermal overheating protection"
+                enableVibration(true)
             }
 
             val notificationManager =
@@ -79,28 +83,41 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    private fun getAppIconBitmap() = try {
+        BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun getAppContentIntent(): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     fun showNotification(
         id: Int,
         channelId: String,
         title: String,
         message: String
     ) {
-        InAppNotificationManager.show(
-            InAppNotificationData(
-                id = id.toLong(),
-                title = title,
-                message = message,
-                type = "INFO"
-            )
-        )
-
         if (!hasNotificationPermission()) return
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(getAppIconBitmap())
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentIntent(getAppContentIntent())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
 
         try {
@@ -109,15 +126,6 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showSmartChargeGuardNotification(level: Int) {
-        InAppNotificationManager.show(
-            InAppNotificationData(
-                id = 8080L,
-                title = "⚡ 80% Smart Charge Limit Reached",
-                message = "Battery reached $level%. Unplug charger to preserve long-term battery cell health.",
-                type = "WARNING"
-            )
-        )
-
         if (!hasNotificationPermission()) return
 
         val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
@@ -131,10 +139,14 @@ class NotificationHelper(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_BATTERY_GUARD)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(getAppIconBitmap())
             .setContentTitle("⚡ 80% Smart Charge Limit Reached")
             .setContentText("Battery reached $level%. Unplug charger to preserve battery health.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Battery reached $level%. Unplug charger to preserve long-term battery cell health."))
+            .setContentIntent(getAppContentIntent())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .addAction(0, "📄 Export PDF Report", reportPendingIntent)
 
@@ -144,19 +156,9 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showThermalOverheatNotification(temp: Float) {
-        val tempStr = "%.1f".format(temp)
-
-        InAppNotificationManager.show(
-            InAppNotificationData(
-                id = 9090L,
-                title = "🔥 High Thermal Overheat Warning",
-                message = "Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety.",
-                type = "ALERT"
-            )
-        )
-
         if (!hasNotificationPermission()) return
 
+        val tempStr = "%.1f".format(temp)
         val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = "ACTION_EXPORT_PDF_REPORT"
         }
@@ -168,10 +170,14 @@ class NotificationHelper(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_BATTERY_GUARD)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(getAppIconBitmap())
             .setContentTitle("🔥 High Thermal Overheat Warning")
             .setContentText("Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Battery temp reached ${tempStr}°C! Heavy background tasks paused for hardware safety."))
+            .setContentIntent(getAppContentIntent())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .addAction(0, "📄 Export PDF Report", reportPendingIntent)
 

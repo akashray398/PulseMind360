@@ -1,7 +1,5 @@
 package com.dev.myapplication.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -12,7 +10,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,7 +18,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dev.myapplication.ui.automation.AutomationScreen
-import com.dev.myapplication.ui.components.InAppNotificationBanner
 import com.dev.myapplication.ui.dashboard.DashboardScreen
 import com.dev.myapplication.ui.deskstand.DeskStandScreen
 import com.dev.myapplication.ui.focustimer.FocusTimerScreen
@@ -38,79 +34,74 @@ fun MainScreen() {
 
     val showBottomBar = currentRoute != Screen.DeskStand.route
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            bottomBar = {
-                if (showBottomBar) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ) {
-                        navScreens.forEach { screen ->
-                            val isSelected = currentRoute == screen.route
-                            NavigationBarItem(
-                                selected = isSelected,
-                                onClick = {
-                                    if (currentRoute != screen.route) {
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ) {
+                    navScreens.forEach { screen ->
+                        val isSelected = currentRoute == screen.route
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                if (currentRoute != screen.route) {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
                                         }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = screen.icon,
-                                        contentDescription = screen.title
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        text = screen.title,
-                                        fontSize = 11.sp
-                                    )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = screen.icon,
+                                    contentDescription = screen.title
                                 )
+                            },
+                            label = {
+                                Text(
+                                    text = screen.title,
+                                    fontSize = 11.sp
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
                             )
-                        }
+                        )
                     }
                 }
             }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = Screen.Dashboard.route,
-                modifier = Modifier.padding(if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues())
-            ) {
-                composable(Screen.Dashboard.route) {
-                    DashboardScreen(onOpenDeskStand = { navController.navigate(Screen.DeskStand.route) })
-                }
-                composable(Screen.Automations.route) {
-                    AutomationScreen()
-                }
-                composable(Screen.FocusMode.route) {
-                    FocusTimerScreen()
-                }
-                composable(Screen.History.route) {
-                    TimelineScreen()
-                }
-                composable(Screen.Settings.route) {
-                    SettingsScreen()
-                }
-                composable(Screen.DeskStand.route) {
-                    DeskStandScreen(onClose = { navController.popBackStack() })
-                }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Dashboard.route,
+            modifier = Modifier.padding(if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues())
+        ) {
+            composable(Screen.Dashboard.route) {
+                DashboardScreen(onOpenDeskStand = { navController.navigate(Screen.DeskStand.route) })
+            }
+            composable(Screen.Automations.route) {
+                AutomationScreen()
+            }
+            composable(Screen.FocusMode.route) {
+                FocusTimerScreen()
+            }
+            composable(Screen.History.route) {
+                TimelineScreen()
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen()
+            }
+            composable(Screen.DeskStand.route) {
+                DeskStandScreen(onClose = { navController.popBackStack() })
             }
         }
-
-        // Top Overlay Animated In-App Notification Glass Banner
-        InAppNotificationBanner(modifier = Modifier.align(Alignment.TopCenter))
     }
 }
