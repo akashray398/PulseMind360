@@ -41,8 +41,9 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - **🎵 Ambient Focus Audio Generator:** Built-in PCM acoustic generator (`Rain White Noise` & `Cyber Binaural Pulse`) powered by `AudioTrack`—100% offline with zero MP3 assets.
 - **🎯 Custom Duration Slider:** Interactive slider setting custom focus durations from 5m up to 120m.
 
-### 🔔 5. Interactive System Notification Controls
-- System shade notification banners equipped with interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
+### 🔔 5. Interactive System & In-App Notification Controls
+- **✨ Animated Floating In-App Glass Notification Banner:** Top-overlay banner that slides down smoothly (`spring` + `slideInVertically`) over any screen with pulsing animated icon badges, glowing alert borders, and auto-dismiss.
+- **System Shade Action Controls:** Notification banners equipped with interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
 
 ### 🔒 6. Settings & Biometric Security Vault
 - **Biometric Authentication:** Secure local vault protected by Android Credential / Biometric Hardware (Fingerprint / PIN).

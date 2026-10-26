@@ -85,6 +85,15 @@ class NotificationHelper(private val context: Context) {
         title: String,
         message: String
     ) {
+        InAppNotificationManager.show(
+            InAppNotificationData(
+                id = id.toLong(),
+                title = title,
+                message = message,
+                type = "INFO"
+            )
+        )
+
         if (!hasNotificationPermission()) return
 
         val builder = NotificationCompat.Builder(context, channelId)
@@ -100,6 +109,15 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showSmartChargeGuardNotification(level: Int) {
+        InAppNotificationManager.show(
+            InAppNotificationData(
+                id = 8080L,
+                title = "⚡ 80% Smart Charge Limit Reached",
+                message = "Battery reached $level%. Unplug charger to preserve long-term battery cell health.",
+                type = "WARNING"
+            )
+        )
+
         if (!hasNotificationPermission()) return
 
         val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
@@ -126,9 +144,19 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showThermalOverheatNotification(temp: Float) {
+        val tempStr = "%.1f".format(temp)
+
+        InAppNotificationManager.show(
+            InAppNotificationData(
+                id = 9090L,
+                title = "🔥 High Thermal Overheat Warning",
+                message = "Battery temp reached ${tempStr}°C! Heavy tasks paused for hardware safety.",
+                type = "ALERT"
+            )
+        )
+
         if (!hasNotificationPermission()) return
 
-        val tempStr = "%.1f".format(temp)
         val reportIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = "ACTION_EXPORT_PDF_REPORT"
         }
