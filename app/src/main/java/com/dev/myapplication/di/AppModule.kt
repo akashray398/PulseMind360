@@ -59,6 +59,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSentinelBaselineDao(db: AppDatabase): com.dev.myapplication.data.local.dao.SentinelBaselineDao = db.sentinelBaselineDao()
+
+    @Provides
+    @Singleton
     fun provideUserPreferencesRepository(@ApplicationContext context: Context): UserPreferencesRepository {
         return UserPreferencesRepository(context)
     }
@@ -133,6 +137,14 @@ object AppModule {
     @Singleton
     fun provideAnomalyDetector(): AnomalyDetector {
         return AnomalyDetector()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSentinelEngine(
+        sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao
+    ): com.dev.myapplication.domain.SentinelEngine {
+        return com.dev.myapplication.domain.SentinelEngine(sentinelBaselineDao)
     }
 
     @Provides

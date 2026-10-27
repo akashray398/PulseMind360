@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapVert
@@ -107,6 +108,7 @@ fun DashboardScreen(
     val workerState by viewModel.workerState.collectAsStateWithLifecycle()
     val healthScore by viewModel.systemHealthScore.collectAsStateWithLifecycle()
     val throughputState by viewModel.networkThroughputState.collectAsStateWithLifecycle()
+    val sentinelReport by viewModel.sentinelReportState.collectAsStateWithLifecycle()
 
     val configuration = LocalConfiguration.current
     val isTabletOrLandscape = configuration.screenWidthDp >= 600
@@ -149,6 +151,9 @@ fun DashboardScreen(
             },
             onOpenDeskStand = onOpenDeskStand
         )
+
+        // PulseMind Sentinel Predictive AI Intelligence Card
+        SentinelIntelligenceCard(sentinelReport)
 
         if (isTabletOrLandscape) {
             // Dual Column Adaptive Layout for Wide Screen / Tablet
@@ -826,6 +831,91 @@ private fun UnifiedNetworkSection(
                 Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domain.SentinelReport) {
+    val (statusColor, statusLabel) = when (sentinelReport.severity) {
+        "CRITICAL" -> StatusError to "CRITICAL SENTINEL SPIKE"
+        "WARNING" -> StatusWarning to "PREDICTIVE ANOMALY"
+        else -> StatusGood to "SENTINEL AI NOMINAL"
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        hasGlowBorder = sentinelReport.hasAnomaly
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Psychology,
+                contentDescription = "Sentinel Intelligence",
+                tint = statusColor,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = sentinelReport.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = statusColor
+                )
+                Text(
+                    text = "${sentinelReport.confidenceScore}% Confidence · Self-Learning Baseline",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Surface(
+                color = statusColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f))
+            ) {
+                Text(
+                    text = statusLabel,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "Root Cause: ${sentinelReport.rootCauseExplanation}",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Evidence: ${sentinelReport.supportingEvidence}",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Action: ${sentinelReport.recommendedAction}",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.secondary
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+        Text(
+            text = sentinelReport.baselineSummary,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

@@ -22,6 +22,8 @@ import com.dev.myapplication.domain.AnomalyReport
 import com.dev.myapplication.domain.AutomationEngine
 import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.FramePerformanceState
+import com.dev.myapplication.domain.SentinelEngine
+import com.dev.myapplication.domain.SentinelReport
 import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.domain.SystemInsights
 import com.dev.myapplication.util.NetworkThroughputState
@@ -43,6 +45,7 @@ class DashboardViewModel @Inject constructor(
     private val automationEngine: AutomationEngine,
     private val smartInsightsEngine: SmartInsightsEngine,
     private val anomalyDetector: AnomalyDetector,
+    private val sentinelEngine: SentinelEngine,
     private val framePerformanceMonitor: FramePerformanceMonitor,
     private val networkInfoApi: NetworkInfoApi,
     private val workManager: WorkManager
@@ -59,6 +62,18 @@ class DashboardViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = NetworkThroughputState()
         )
+
+    val sentinelReportState: StateFlow<SentinelReport> = combine(
+        batteryState,
+        networkState,
+        networkThroughputState
+    ) { bState, nState, tState ->
+        sentinelEngine.evaluateSentinelIntelligence(bState, nState, tState)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SentinelReport()
+    )
 
     val insightsState: StateFlow<SystemInsights> = combine(
         batteryState,
