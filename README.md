@@ -21,7 +21,7 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - **⚡ 80% Smart Charge Lifespan Guard & Overheat Alarm:** Automated notification triggers when battery reaches 80% while charging or when temperature exceeds 40°C to preserve long-term battery cell health.
 - **📄 Native PDF Audit Report Generator:** Instant 1-tap generation of a formatted 2D PDF Diagnostic Report using `android.graphics.pdf.PdfDocument` and Android `FileProvider` with native Share Intent integration.
 - **Live Battery & Thermal Curves:** Custom Compose Canvas charting showing level (%) and temperature (°C) trends over time with direct data point value labels and gradient fills.
-- **Unified Network & Geo Diagnostics:** Monitors Wi-Fi/Cellular connectivity, metered state, downstream link speeds, and queries public IP & ISP context via Retrofit API.
+- **📶 Unified Network & Bandwidth Hub:** Integrated live upload/download speed gauges (KB/s & MB/s via `TrafficStats`), metered Wi-Fi/Cellular connectivity status, link speeds, and public IP & ISP location context via Retrofit API in a single non-duplicated card.
 - **Smart AI System Advisories:** Contextual health recommendations based on live system diagnostics.
 - **Developer Telemetry (Collapsible):** Live UI frame render performance (FPS / frame time) and WorkManager sync worker controls.
 

@@ -167,18 +167,15 @@ fun DashboardScreen(
                 ) {
                     BatteryMetricsSection(batteryState, insights)
                     BatteryTrendSection(insights.trendHistory)
-                    if (anomaly.hasAnomaly) {
-                        AnomalySection(anomaly)
-                    }
                 }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     SmartAIAdvisorySection(insights.healthAdvisories)
-                    NetworkTrafficInspectorSection(throughputState)
                     UnifiedNetworkSection(
                         networkState = networkState,
+                        throughputState = throughputState,
                         networkInfoState = networkInfoState,
                         onFetchInfo = { viewModel.fetchNetworkInfo() }
                     )
@@ -193,14 +190,11 @@ fun DashboardScreen(
         } else {
             // Single Column Stack for Phones
             BatteryMetricsSection(batteryState, insights)
-            if (anomaly.hasAnomaly) {
-                AnomalySection(anomaly)
-            }
             BatteryTrendSection(insights.trendHistory)
             SmartAIAdvisorySection(insights.healthAdvisories)
-            NetworkTrafficInspectorSection(throughputState)
             UnifiedNetworkSection(
                 networkState = networkState,
+                throughputState = throughputState,
                 networkInfoState = networkInfoState,
                 onFetchInfo = { viewModel.fetchNetworkInfo() }
             )
@@ -679,40 +673,6 @@ private fun BatteryTrendSection(trendHistory: List<com.dev.myapplication.ui.comp
 }
 
 @Composable
-private fun AnomalySection(anomaly: com.dev.myapplication.domain.AnomalyReport) {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        hasGlowBorder = anomaly.hasAnomaly
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = "Anomaly",
-                tint = if (anomaly.hasAnomaly) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(26.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = anomaly.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = if (anomaly.hasAnomaly) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = anomaly.description,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun SmartAIAdvisorySection(advisories: List<String>) {
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
@@ -746,89 +706,6 @@ private fun SmartAIAdvisorySection(advisories: List<String>) {
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UnifiedNetworkSection(
-    networkState: com.dev.myapplication.data.monitor.NetworkState,
-    networkInfoState: Resource<com.dev.myapplication.data.remote.NetworkInfoResponse>,
-    onFetchInfo: () -> Unit
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = if (networkState.isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
-                contentDescription = "Network Status",
-                tint = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Network & Location Diagnostics", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(
-                    text = if (networkState.isConnected) "Connected (${networkState.transportType})" else "Disconnected",
-                    fontSize = 12.sp,
-                    color = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (networkState.isConnected) {
-                    Text(
-                        text = "Metered: ${if (networkState.isMetered) "Yes" else "No"} | Downstream: ${networkState.linkDownstreamKbps / 1000} Mbps",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            OutlinedButton(
-                onClick = onFetchInfo,
-                contentPadding = ButtonDefaults.ContentPadding
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CloudDownload,
-                    contentDescription = "Fetch IP",
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "IP Info", fontSize = 11.sp)
-            }
-        }
-
-        when (networkInfoState) {
-            is Resource.Idle -> { }
-            is Resource.Loading -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Querying public network endpoint...", fontSize = 12.sp)
-                }
-            }
-            is Resource.Success -> {
-                val info = networkInfoState.data
-                val locationParts = listOfNotNull(info.city, info.region, info.country).filter { it.isNotBlank() }
-                val locationStr = if (locationParts.isNotEmpty()) locationParts.joinToString(", ") else "Global IP Network"
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "Location: $locationStr", fontSize = 11.sp)
-                    if (!info.org.isNull0OrBlank()) {
-                        Text(text = "ISP / Org: ${info.org}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            is Resource.Error -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
     }
@@ -920,17 +797,22 @@ private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domai
 }
 
 @Composable
-private fun NetworkTrafficInspectorSection(throughputState: com.dev.myapplication.util.NetworkThroughputState) {
+private fun UnifiedNetworkSection(
+    networkState: com.dev.myapplication.data.monitor.NetworkState,
+    throughputState: com.dev.myapplication.util.NetworkThroughputState,
+    networkInfoState: Resource<com.dev.myapplication.data.remote.NetworkInfoResponse>,
+    onFetchInfo: () -> Unit
+) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                imageVector = Icons.Default.SwapVert,
-                contentDescription = "Traffic Inspector",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                imageVector = if (networkState.isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
+                contentDescription = "Network Status",
+                tint = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(32.dp)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -941,7 +823,7 @@ private fun NetworkTrafficInspectorSection(throughputState: com.dev.myapplicatio
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Live Network Bandwidth", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = "Network & Bandwidth Hub", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     if (throughputState.isHighBandwidthActive) {
                         Surface(
                             color = StatusWarning.copy(alpha = 0.15f),
@@ -959,6 +841,14 @@ private fun NetworkTrafficInspectorSection(throughputState: com.dev.myapplicatio
                     }
                 }
 
+                Text(
+                    text = if (networkState.isConnected) "Connected (${networkState.transportType}) · ${if (networkState.isMetered) "Metered" else "Unmetered"}" else "Disconnected",
+                    fontSize = 12.sp,
+                    color = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Live Speed Throughput Indicators
                 val dlSpeedStr = if (throughputState.downloadKbps >= 1024f) {
                     "%.1f MB/s".format(throughputState.downloadKbps / 1024f)
                 } else {
@@ -972,39 +862,76 @@ private fun NetworkTrafficInspectorSection(throughputState: com.dev.myapplicatio
                 }
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 2.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.ArrowDownward,
-                            contentDescription = "Download Speed",
+                            contentDescription = "Download",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "DL: $dlSpeedStr", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "DL: $dlSpeedStr", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = "Upload Speed",
+                            contentDescription = "Upload",
                             tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "UL: $ulSpeedStr", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(text = "UL: $ulSpeedStr", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
                     }
                 }
+            }
 
-                Text(
-                    text = "Session Data: ${"%.1f".format(throughputState.totalRxMb)} MB Rx · ${"%.1f".format(throughputState.totalTxMb)} MB Tx",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
+            OutlinedButton(
+                onClick = onFetchInfo,
+                contentPadding = ButtonDefaults.ContentPadding,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = "Fetch IP",
+                    modifier = Modifier.size(16.dp)
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "IP Info", fontSize = 11.sp)
+            }
+        }
+
+        when (networkInfoState) {
+            is Resource.Idle -> { }
+            is Resource.Loading -> {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Querying public network endpoint...", fontSize = 12.sp)
+                }
+            }
+            is Resource.Success -> {
+                val info = networkInfoState.data
+                val locationParts = listOfNotNull(info.city, info.region, info.country).filter { it.isNotBlank() }
+                val locationStr = if (locationParts.isNotEmpty()) locationParts.joinToString(", ") else "Global IP Network"
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Location: $locationStr", fontSize = 11.sp)
+                    if (!info.org.isNull0OrBlank()) {
+                        Text(text = "ISP / Org: ${info.org}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            is Resource.Error -> {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
     }
