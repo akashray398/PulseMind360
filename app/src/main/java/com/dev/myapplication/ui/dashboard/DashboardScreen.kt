@@ -146,7 +146,8 @@ fun DashboardScreen(
                     batteryState = batteryState,
                     networkState = networkState,
                     anomalyReport = anomaly,
-                    frameState = frameState
+                    frameState = frameState,
+                    redactMetadata = true
                 )
             },
             onOpenDeskStand = onOpenDeskStand

@@ -29,6 +29,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -357,6 +358,94 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        // Privacy Command Center & Transparency Card
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = "Privacy Command Center",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Privacy Command Center", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = "Data Inventory, Redaction & Permissions Matrix", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Report Metadata Redaction Switch
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Sanitize PDF Audit Reports", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(
+                        text = "Redacts IP addresses and sensitive network metadata in exported PDFs.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = prefs.redactExportMetadata,
+                    onCheckedChange = { checked ->
+                        if (!checked && prefs.biometricVaultEnabled && context is FragmentActivity) {
+                            biometricHelper.promptBiometricAuth(
+                                activity = context,
+                                title = "Un-redact Sensitive Metadata",
+                                subtitle = "Confirm fingerprint/PIN to export un-redacted reports",
+                                onSuccess = { viewModel.setRedactExportMetadata(false) },
+                                onError = { viewModel.setRedactExportMetadata(true) }
+                            )
+                        } else {
+                            viewModel.setRedactExportMetadata(checked)
+                        }
+                    }
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+            // App Permissions Transparency Matrix
+            Text(text = "App Permissions Rationale", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            val permissionsList = listOf(
+                "Notifications" to "Triggers high-priority 80% charge & thermal overheat alerts",
+                "Network State" to "Monitors cellular/Wi-Fi connection state and throughput speeds",
+                "Biometric Hardware" to "Restricts security vault access via fingerprint/PIN authentication",
+                "Internet" to "Queries public IP & ISP location context on manual request"
+            )
+
+            permissionsList.forEach { (permName, rationale) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp)
+                ) {
+                    Text(text = "• $permName:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = rationale, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+            // Local Data Footprint Inventory
+            Text(
+                text = "📁 Local Inventory: 100% Offline Room DB (~0.35 MB) · Zero Cloud Tracking",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary
+            )
         }
 
         // Privacy & Data Purge Card

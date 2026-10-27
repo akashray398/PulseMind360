@@ -55,6 +55,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setRedactExportMetadata(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setRedactExportMetadata(enabled)
+        }
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setNotificationsEnabled(enabled)

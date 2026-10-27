@@ -25,7 +25,8 @@ object ReportGenerator {
         batteryState: BatteryState,
         networkState: NetworkState,
         anomalyReport: AnomalyReport,
-        frameState: FramePerformanceState
+        frameState: FramePerformanceState,
+        redactMetadata: Boolean = true
     ) {
         val pdfDocument = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 standard dimensions
@@ -53,7 +54,7 @@ object ReportGenerator {
 
         paint.color = Color.WHITE
         paint.textSize = 10f
-        canvas.drawText("Generated: $timestamp", 30f, 88f, paint)
+        canvas.drawText("Generated: $timestamp ${if (redactMetadata) "· [PRIVACY REDACTION ACTIVE]" else ""}", 30f, 88f, paint)
 
         // Health Score Card Section
         val scoreColor = when {
@@ -118,6 +119,11 @@ object ReportGenerator {
         drawMetricRow("Connection Status", if (networkState.isConnected) "Connected (${networkState.transportType})" else "Disconnected")
         drawMetricRow("Metered Connection", if (networkState.isMetered) "Yes" else "No")
         drawMetricRow("Downstream Link Speed", "${networkState.linkDownstreamKbps / 1000} Mbps")
+        if (redactMetadata) {
+            drawMetricRow("Public IP Metadata", "[REDACTED FOR PRIVACY SANITIZATION]")
+        } else {
+            drawMetricRow("Public IP Metadata", "Un-redacted Explicit Telemetry")
+        }
         yOffset += 10f
 
         // Section 3: Anomaly & System Health Audit

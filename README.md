@@ -45,8 +45,9 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 ### 🔔 5. System Notification Shade Controls
 - **📱 Branded System Notification Cards:** System shade notifications formatted with the app's real branded icon (`setLargeIcon`), expandable `BigTextStyle` card animations, high-priority sound/vibration alerts, and interactive action buttons (`[📄 Export PDF Report]`) powered by `BroadcastReceiver` and `PendingIntent`.
 
-### 🔒 6. Settings & Biometric Security Vault
-- **🔒 Persistent Real-Time Biometric Vault:** Fingerprint/PIN authentication persisted via DataStore; enforces real-time biometric verification before purging data or running KeyStore tests.
+### 🔒 6. Privacy Command Center & Biometric Security Vault
+- **🛡️ Privacy Command Center:** App permissions transparency matrix with plain-English rationales, private local data inventory (~0.35 MB Room DB footprint), and auto-redaction toggle for PDF audit reports.
+- **🔒 Persistent Real-Time Biometric Vault:** Fingerprint/PIN authentication persisted via DataStore; enforces real-time biometric verification before un-redacting metadata, purging data, or running KeyStore tests.
 - **Biometric Authentication:** Secure local vault protected by Android Credential / Biometric Hardware (Fingerprint / PIN).
 - **Theme Customization:** Toggle between Dark, Light, and System Theme modes.
 - **Custom Alert Thresholds:** Low battery notification thresholds and background sync intervals.
