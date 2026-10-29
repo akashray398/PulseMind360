@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -739,6 +740,8 @@ private fun SmartAIAdvisorySection(advisories: List<String>) {
 
 @Composable
 private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domain.SentinelReport) {
+    var isExpanded by remember { mutableStateOf(sentinelReport.hasAnomaly) }
+
     val (statusColor, statusLabel) = when (sentinelReport.severity) {
         "CRITICAL" -> StatusError to "CRITICAL SENTINEL SPIKE"
         "WARNING" -> StatusWarning to "PREDICTIVE ANOMALY"
@@ -746,18 +749,33 @@ private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domai
     }
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded },
         hasGlowBorder = sentinelReport.hasAnomaly
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "SentinelEmblemPulse")
+            val emblemAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.7f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1400, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "EmblemAlpha"
+            )
+
             Icon(
                 imageVector = Icons.Default.Psychology,
                 contentDescription = "Sentinel Intelligence",
                 tint = statusColor,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier
+                    .size(26.dp)
+                    .graphicsLayer { alpha = if (sentinelReport.hasAnomaly) emblemAlpha else 1.0f }
             )
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -766,7 +784,7 @@ private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domai
                 Text(
                     text = sentinelReport.title,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     color = statusColor
                 )
                 Text(
@@ -783,42 +801,70 @@ private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domai
             ) {
                 Text(
                     text = statusLabel,
-                    fontSize = 9.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     color = statusColor,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = "Root Cause: ${sentinelReport.rootCauseExplanation}",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+            val rotationAngle by animateFloatAsState(
+                targetValue = if (isExpanded) 180f else 0f,
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                label = "ChevronRotation"
             )
-            Text(
-                text = "Evidence: ${sentinelReport.supportingEvidence}",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Action: ${sentinelReport.recommendedAction}",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.secondary
+
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { rotationZ = rotationAngle }
             )
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(),
+            exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut()
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-        Text(
-            text = sentinelReport.baselineSummary,
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "Root Cause: ${sentinelReport.rootCauseExplanation}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Evidence: ${sentinelReport.supportingEvidence}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Action: ${sentinelReport.recommendedAction}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                Text(
+                    text = sentinelReport.baselineSummary,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
