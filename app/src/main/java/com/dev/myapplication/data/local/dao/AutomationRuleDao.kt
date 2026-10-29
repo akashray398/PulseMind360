@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AutomationRuleDao {
-    @Query("SELECT * FROM automation_rules ORDER BY createdAt DESC")
+    @Query("SELECT * FROM automation_rules ORDER BY priority ASC, createdAt DESC")
     fun getAllRules(): Flow<List<AutomationRuleEntity>>
 
-    @Query("SELECT * FROM automation_rules WHERE isEnabled = 1")
+    @Query("SELECT * FROM automation_rules WHERE isEnabled = 1 ORDER BY priority ASC, createdAt DESC")
     fun getActiveRules(): Flow<List<AutomationRuleEntity>>
 
-    @Query("SELECT * FROM automation_rules WHERE isEnabled = 1")
+    @Query("SELECT * FROM automation_rules WHERE isEnabled = 1 ORDER BY priority ASC, createdAt DESC")
     suspend fun getActiveRulesList(): List<AutomationRuleEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -29,8 +29,11 @@ interface AutomationRuleDao {
     @Query("UPDATE automation_rules SET isEnabled = :isEnabled WHERE id = :id")
     suspend fun updateRuleStatus(id: Long, isEnabled: Boolean)
 
-    @Query("UPDATE automation_rules SET lastTriggeredAt = :timestamp, triggerCount = triggerCount + 1 WHERE id = :id")
-    suspend fun updateLastTriggered(id: Long, timestamp: Long)
+    @Query("UPDATE automation_rules SET lastTriggeredAt = :timestamp, triggerCount = triggerCount + 1, lastExecutionReason = :reason WHERE id = :id")
+    suspend fun updateLastTriggered(id: Long, timestamp: Long, reason: String)
+
+    @Query("UPDATE automation_rules SET lastExecutionReason = :reason WHERE id = :id")
+    suspend fun updateExecutionReason(id: Long, reason: String)
 
     @Delete
     suspend fun deleteRule(rule: AutomationRuleEntity)

@@ -25,7 +25,8 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - **Smart AI System Advisories:** Contextual health recommendations based on live system diagnostics.
 - **Developer Telemetry (Collapsible):** Live UI frame render performance (FPS / frame time) and WorkManager sync worker controls.
 
-### ⚙️ 2. Contextual Automation Engine
+### ⚙️ 2. Contextual Automation Engine & Intelligence Pipeline
+- **🧠 Automation Rule Intelligence:** Advanced multi-condition evaluation with boolean operators (`AND` / `OR`), custom per-rule cooldowns, priority levels (`HIGH`, `MED`, `LOW`), conflict prevention, and plain-English execution explanations (e.g., *"Rule skipped: Device is offline and cooldown has not expired"*).
 - **⚡ 1-Click Smart Automation Recipes:** Quick-add pre-configured rules (`Low Battery Saver`, `Wi-Fi Sync Guard`, `Charging Alert`, `Offline Event Log`) with 1 tap.
 - **📊 Live Execution Counter & Status:** Real-time tracking of rule execution counts (`⚡ Triggered X times`), active status indicators, and live evaluation feedback.
 - Configure custom **IF-THEN rules** (e.g., *IF Battery <= 20% THEN Trigger Notification* or *IF Metered Wi-Fi THEN Throttle Background Sync*).

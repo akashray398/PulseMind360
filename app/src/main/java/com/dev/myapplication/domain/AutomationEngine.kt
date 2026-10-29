@@ -23,7 +23,6 @@ class AutomationEngine(
     private val workManager: WorkManager
 ) {
 
-    private val minCooldownMs = 60_000L // Cooldown for custom rules
     private val alarmCooldownMs = 300_000L // 5 min cooldown for system alerts
 
     private var lastGuardNotifiedAt = 0L
@@ -71,15 +70,35 @@ class AutomationEngine(
         // 3. Evaluate Active User Rules
         val activeRules = automationRuleDao.getActiveRulesList()
         for (rule in activeRules) {
-            if (currentTime - rule.lastTriggeredAt < minCooldownMs) {
-                continue // Skip rules in cooldown
+            val cooldownMs = (rule.cooldownMinutes.coerceAtLeast(1)) * 60_000L
+            val timeSinceLastTrigger = currentTime - rule.lastTriggeredAt
+
+            if (rule.lastTriggeredAt > 0 && timeSinceLastTrigger < cooldownMs) {
+                val remainingMins = ((cooldownMs - timeSinceLastTrigger) / 60_000L).coerceAtLeast(1)
+                val reason = "Skipped: Cooldown active (${remainingMins}m remaining)"
+                automationRuleDao.updateExecutionReason(rule.id, reason)
+                continue
             }
 
-            val isConditionMet = checkCondition(rule, batteryState, networkState)
-            if (isConditionMet) {
+            val primaryMet = evalSingleCondition(rule.conditionType, rule.conditionValue, batteryState, networkState)
+            val secondaryMet = if (rule.secondaryConditionType.isNotBlank()) {
+                evalSingleCondition(rule.secondaryConditionType, rule.secondaryConditionValue, batteryState, networkState)
+            } else false
+
+            val finalConditionMet = when (rule.logicalOperator) {
+                "AND" -> primaryMet && secondaryMet
+                "OR" -> primaryMet || secondaryMet
+                else -> primaryMet
+            }
+
+            if (finalConditionMet) {
                 executeRule(rule)
-                automationRuleDao.updateLastTriggered(rule.id, currentTime)
+                val reason = "Executed: Conditions satisfied (${rule.conditionType}${if (rule.logicalOperator != "NONE") " ${rule.logicalOperator} ${rule.secondaryConditionType}" else ""})"
+                automationRuleDao.updateLastTriggered(rule.id, currentTime, reason)
                 triggeredCount++
+            } else {
+                val reason = "Waiting: Conditions not satisfied"
+                automationRuleDao.updateExecutionReason(rule.id, reason)
             }
         }
 
@@ -89,13 +108,14 @@ class AutomationEngine(
         )
     }
 
-    private fun checkCondition(
-        rule: AutomationRuleEntity,
+    private fun evalSingleCondition(
+        conditionType: String,
+        conditionValue: Int,
         batteryState: BatteryState,
         networkState: NetworkState
     ): Boolean {
-        return when (rule.conditionType) {
-            "BATTERY_BELOW" -> !batteryState.isCharging && batteryState.level <= rule.conditionValue
+        return when (conditionType) {
+            "BATTERY_BELOW" -> !batteryState.isCharging && batteryState.level <= conditionValue
             "CHARGING_STATE_CHANGED" -> batteryState.isCharging
             "NETWORK_DISCONNECTED" -> !networkState.isConnected
             "NETWORK_CONNECTED" -> networkState.isConnected

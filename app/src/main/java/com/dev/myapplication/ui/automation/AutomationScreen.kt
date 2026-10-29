@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SignalCellularConnectedNoInternet4Bar
 import androidx.compose.material.icons.filled.Wifi
@@ -62,7 +63,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.data.local.entity.AutomationRuleEntity
 import com.dev.myapplication.ui.components.GlassCard
+import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
+import com.dev.myapplication.ui.theme.StatusWarning
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -110,7 +113,7 @@ fun AutomationScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "User-Configurable Contextual Rules",
+                        text = "Contextual Intelligence Rules & Logic Pipeline",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -164,7 +167,7 @@ fun AutomationScreen(
                 item {
                     RecipeChip(
                         title = "Low Battery Saver",
-                        subtitle = "IF Battery <= 15% Alert",
+                        subtitle = "HIGH PRIORITY · IF Battery <= 15%",
                         icon = Icons.Default.BatteryAlert,
                         onClick = { viewModel.addPresetRecipe("LOW_BATTERY") }
                     )
@@ -172,7 +175,7 @@ fun AutomationScreen(
                 item {
                     RecipeChip(
                         title = "Wi-Fi Sync Guard",
-                        subtitle = "IF Wi-Fi -> Trigger Sync",
+                        subtitle = "MED PRIORITY · IF Wi-Fi -> Sync",
                         icon = Icons.Default.Wifi,
                         onClick = { viewModel.addPresetRecipe("WIFI_SYNC") }
                     )
@@ -180,7 +183,7 @@ fun AutomationScreen(
                 item {
                     RecipeChip(
                         title = "Charging Alert",
-                        subtitle = "IF Charging Started",
+                        subtitle = "MED PRIORITY · IF Plugged In",
                         icon = Icons.Default.Bolt,
                         onClick = { viewModel.addPresetRecipe("CHARGING_ALERT") }
                     )
@@ -188,7 +191,7 @@ fun AutomationScreen(
                 item {
                     RecipeChip(
                         title = "Offline Event Log",
-                        subtitle = "IF Disconnected -> Log",
+                        subtitle = "LOW PRIORITY · IF Disconnected",
                         icon = Icons.Default.SignalCellularConnectedNoInternet4Bar,
                         onClick = { viewModel.addPresetRecipe("OFFLINE_LOG") }
                     )
@@ -261,8 +264,19 @@ fun AutomationScreen(
     if (showAddDialog) {
         CreateRuleDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { name, condType, condVal, actType, actTarget ->
-                viewModel.addRule(name, condType, condVal, actType, actTarget)
+            onSave = { name, condType, condVal, secCondType, secCondVal, op, actType, actTarget, cooldown, prio ->
+                viewModel.addRule(
+                    name = name,
+                    conditionType = condType,
+                    conditionValue = condVal,
+                    secondaryConditionType = secCondType,
+                    secondaryConditionValue = secCondVal,
+                    logicalOperator = op,
+                    actionType = actType,
+                    actionTarget = actTarget,
+                    cooldownMinutes = cooldown,
+                    priority = prio
+                )
                 showAddDialog = false
             }
         )
@@ -309,6 +323,12 @@ fun AutomationRuleItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
 
+    val (prioColor, prioText) = when (rule.priority) {
+        1 -> StatusError to "HIGH PRIORITY"
+        2 -> StatusWarning to "MED PRIORITY"
+        else -> MaterialTheme.colorScheme.onSurfaceVariant to "LOW PRIORITY"
+    }
+
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         hasGlowBorder = rule.isEnabled
@@ -322,26 +342,53 @@ fun AutomationRuleItem(
                     .weight(1f)
                     .padding(end = 12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .background(
-                                color = if (rule.isEnabled) StatusGood else MaterialTheme.colorScheme.outline,
-                                shape = CircleShape
-                            )
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = rule.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(
+                                    color = if (rule.isEnabled) StatusGood else MaterialTheme.colorScheme.outline,
+                                    shape = CircleShape
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = rule.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
+
+                    Surface(
+                        color = prioColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, prioColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = prioText,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = prioColor,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val condText = if (rule.logicalOperator != "NONE" && rule.secondaryConditionType.isNotBlank()) {
+                    "IF: ${rule.conditionType} (${rule.conditionValue}) ${rule.logicalOperator} ${rule.secondaryConditionType}"
+                } else {
+                    "IF: ${rule.conditionType} (${rule.conditionValue})"
+                }
+
                 Text(
-                    text = "IF: ${rule.conditionType} (${rule.conditionValue})",
+                    text = condText,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
@@ -352,13 +399,32 @@ fun AutomationRuleItem(
                     color = MaterialTheme.colorScheme.secondary
                 )
 
+                // Explanation & Reason Line
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Reason",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = rule.lastExecutionReason,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(
-                        text = "⚡ Triggered ${rule.triggerCount} times",
+                        text = "⚡ Triggered ${rule.triggerCount} times · Cooldown: ${rule.cooldownMinutes}m",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -395,25 +461,33 @@ fun AutomationRuleItem(
 @Composable
 fun CreateRuleDialog(
     onDismiss: () -> Unit,
-    onSave: (String, String, Int, String, String) -> Unit
+    onSave: (String, String, Int, String, Int, String, String, String, Int, Int) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var selectedCondition by remember { mutableStateOf("BATTERY_BELOW") }
     var conditionValue by remember { mutableIntStateOf(20) }
+    var logicalOperator by remember { mutableStateOf("NONE") } // NONE, AND, OR
+    var secondaryCondition by remember { mutableStateOf("") }
+    var secondaryValue by remember { mutableIntStateOf(0) }
     var selectedAction by remember { mutableStateOf("SHOW_NOTIFICATION") }
     var actionTarget by remember { mutableStateOf("") }
+    var cooldownMinutes by remember { mutableIntStateOf(5) }
+    var priority by remember { mutableIntStateOf(2) }
 
     val conditions = listOf("BATTERY_BELOW", "CHARGING_STATE_CHANGED", "NETWORK_DISCONNECTED", "NETWORK_CONNECTED")
     val actions = listOf("SHOW_NOTIFICATION", "LOG_EVENT", "TRIGGER_SYNC_WORKER")
+    val operators = listOf("NONE", "AND", "OR")
 
     var condExpanded by remember { mutableStateOf(false) }
+    var opExpanded by remember { mutableStateOf(false) }
+    var secCondExpanded by remember { mutableStateOf(false) }
     var actExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "New Automation Rule", fontWeight = FontWeight.Bold) },
+        title = { Text(text = "New Automation Intelligence Rule", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -422,7 +496,7 @@ fun CreateRuleDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Condition Selector Dropdown
+                // Primary Condition Selector Dropdown
                 ExposedDropdownMenuBox(
                     expanded = condExpanded,
                     onExpandedChange = { condExpanded = !condExpanded }
@@ -431,7 +505,7 @@ fun CreateRuleDialog(
                         value = selectedCondition,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Condition") },
+                        label = { Text("Primary Condition") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = condExpanded) },
                         modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                     )
@@ -459,6 +533,65 @@ fun CreateRuleDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                // Logical Operator Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = opExpanded,
+                    onExpandedChange = { opExpanded = !opExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = logicalOperator,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Logical Operator") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = opExpanded) },
+                        modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = opExpanded,
+                        onDismissRequest = { opExpanded = false }
+                    ) {
+                        operators.forEach { op ->
+                            DropdownMenuItem(
+                                text = { Text(op) },
+                                onClick = {
+                                    logicalOperator = op
+                                    opExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (logicalOperator != "NONE") {
+                    ExposedDropdownMenuBox(
+                        expanded = secCondExpanded,
+                        onExpandedChange = { secCondExpanded = !secCondExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = secondaryCondition.ifBlank { "Select Secondary Condition" },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Secondary Condition") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = secCondExpanded) },
+                            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = secCondExpanded,
+                            onDismissRequest = { secCondExpanded = false }
+                        ) {
+                            conditions.forEach { cond ->
+                                DropdownMenuItem(
+                                    text = { Text(cond) },
+                                    onClick = {
+                                        secondaryCondition = cond
+                                        secCondExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Action Selector Dropdown
@@ -499,13 +632,45 @@ fun CreateRuleDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = cooldownMinutes.toString(),
+                        onValueChange = { cooldownMinutes = it.toIntOrNull() ?: 5 },
+                        label = { Text("Cooldown (mins)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = priority.toString(),
+                        onValueChange = { priority = (it.toIntOrNull() ?: 2).coerceIn(1, 3) },
+                        label = { Text("Priority (1=High)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 enabled = name.isNotBlank(),
                 onClick = {
-                    onSave(name, selectedCondition, conditionValue, selectedAction, actionTarget)
+                    onSave(
+                        name,
+                        selectedCondition,
+                        conditionValue,
+                        secondaryCondition,
+                        secondaryValue,
+                        logicalOperator,
+                        selectedAction,
+                        actionTarget,
+                        cooldownMinutes,
+                        priority
+                    )
                 }
             ) {
                 Text("Create Rule")

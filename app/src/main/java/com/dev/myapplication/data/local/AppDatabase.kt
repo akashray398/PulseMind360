@@ -18,7 +18,7 @@ import com.dev.myapplication.data.local.entity.SentinelBaselineEntity
         FocusSessionEntity::class,
         SentinelBaselineEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

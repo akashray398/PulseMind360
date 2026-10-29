@@ -44,8 +44,13 @@ class AutomationViewModel @Inject constructor(
         name: String,
         conditionType: String,
         conditionValue: Int,
+        secondaryConditionType: String = "",
+        secondaryConditionValue: Int = 0,
+        logicalOperator: String = "NONE",
         actionType: String,
-        actionTarget: String
+        actionTarget: String,
+        cooldownMinutes: Int = 5,
+        priority: Int = 2
     ) {
         viewModelScope.launch {
             automationRuleDao.insertRule(
@@ -53,8 +58,13 @@ class AutomationViewModel @Inject constructor(
                     name = name,
                     conditionType = conditionType,
                     conditionValue = conditionValue,
+                    secondaryConditionType = secondaryConditionType,
+                    secondaryConditionValue = secondaryConditionValue,
+                    logicalOperator = logicalOperator,
                     actionType = actionType,
                     actionTarget = actionTarget,
+                    cooldownMinutes = cooldownMinutes,
+                    priority = priority,
                     isEnabled = true
                 )
             )
@@ -69,28 +79,36 @@ class AutomationViewModel @Inject constructor(
                     conditionType = "BATTERY_BELOW",
                     conditionValue = 15,
                     actionType = "SHOW_NOTIFICATION",
-                    actionTarget = "Battery <= 15%. Connect power source to maintain system tasks."
+                    actionTarget = "Battery <= 15%. Connect power source to maintain system tasks.",
+                    cooldownMinutes = 10,
+                    priority = 1
                 )
                 "WIFI_SYNC" -> AutomationRuleEntity(
                     name = "Wi-Fi Sync Guard",
                     conditionType = "NETWORK_CONNECTED",
                     conditionValue = 0,
                     actionType = "TRIGGER_SYNC_WORKER",
-                    actionTarget = "Background Sync"
+                    actionTarget = "Background Sync",
+                    cooldownMinutes = 15,
+                    priority = 2
                 )
                 "CHARGING_ALERT" -> AutomationRuleEntity(
                     name = "Charging Started Alert",
                     conditionType = "CHARGING_STATE_CHANGED",
                     conditionValue = 0,
                     actionType = "SHOW_NOTIFICATION",
-                    actionTarget = "Device plugged in and charging."
+                    actionTarget = "Device plugged in and charging.",
+                    cooldownMinutes = 5,
+                    priority = 2
                 )
                 "OFFLINE_LOG" -> AutomationRuleEntity(
                     name = "Offline Event Log",
                     conditionType = "NETWORK_DISCONNECTED",
                     conditionValue = 0,
                     actionType = "LOG_EVENT",
-                    actionTarget = "Offline State"
+                    actionTarget = "Offline State",
+                    cooldownMinutes = 5,
+                    priority = 3
                 )
                 else -> return@launch
             }
