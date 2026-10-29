@@ -619,49 +619,69 @@ private fun BatteryMetricsSection(
         modifier = Modifier.fillMaxWidth(),
         hasGlowBorder = batteryState.isCharging
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            AnimatedBatteryGauge(
-                level = batteryState.level,
-                isCharging = batteryState.isCharging
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+                AnimatedBatteryGauge(
+                    level = batteryState.level,
+                    isCharging = batteryState.isCharging
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    Text(text = "Battery & Power AI", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    if (insights.isSmartChargeGuardActive) {
-                        Surface(
-                            color = StatusWarning.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp),
-                            border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
-                        ) {
-                            Text(
-                                text = "80% GUARD",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusWarning,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Battery & Thermal AI Forecast", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        if (insights.isSmartChargeGuardActive) {
+                            Surface(
+                                color = StatusWarning.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "80% GUARD",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StatusWarning,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
-                }
 
-                Text(text = "Status: ${batteryState.status} (${batteryState.plugType})", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Rate Velocity: ${insights.dischargeRatePctPerHour}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                Text(text = "Predictive Temp: ${insights.predictiveThermalSlope}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Estimate: ${insights.timeRemainingEstimate}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    Text(text = "Status: ${batteryState.status} (${batteryState.plugType})", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "Estimate: ${insights.timeRemainingWithMargin}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    Text(text = "Rate Velocity: ${insights.dischargeRatePctPerHour}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Thermal Velocity: ${insights.thermalVelocityText}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
+
+            if (insights.isBaselineDeviation) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Text(
+                    text = insights.baselineDeviationText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StatusWarning
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+            Text(
+                text = "ℹ️ ${insights.disclaimerText}",
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
