@@ -109,6 +109,7 @@ fun DashboardScreen(
     val healthScore by viewModel.systemHealthScore.collectAsStateWithLifecycle()
     val throughputState by viewModel.networkThroughputState.collectAsStateWithLifecycle()
     val sentinelReport by viewModel.sentinelReportState.collectAsStateWithLifecycle()
+    val networkDiagnostic by viewModel.networkDiagnosticState.collectAsStateWithLifecycle()
 
     val configuration = LocalConfiguration.current
     val isTabletOrLandscape = configuration.screenWidthDp >= 600
@@ -177,8 +178,10 @@ fun DashboardScreen(
                     UnifiedNetworkSection(
                         networkState = networkState,
                         throughputState = throughputState,
+                        networkDiagnostic = networkDiagnostic,
                         networkInfoState = networkInfoState,
-                        onFetchInfo = { viewModel.fetchNetworkInfo() }
+                        onFetchInfo = { viewModel.fetchNetworkInfo() },
+                        onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
                     )
                     MemoryOptimizationSection()
                     DeveloperDiagnosticsSection(
@@ -196,8 +199,10 @@ fun DashboardScreen(
             UnifiedNetworkSection(
                 networkState = networkState,
                 throughputState = throughputState,
+                networkDiagnostic = networkDiagnostic,
                 networkInfoState = networkInfoState,
-                onFetchInfo = { viewModel.fetchNetworkInfo() }
+                onFetchInfo = { viewModel.fetchNetworkInfo() },
+                onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
             )
             MemoryOptimizationSection()
             DeveloperDiagnosticsSection(
@@ -821,8 +826,10 @@ private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domai
 private fun UnifiedNetworkSection(
     networkState: com.dev.myapplication.data.monitor.NetworkState,
     throughputState: com.dev.myapplication.util.NetworkThroughputState,
+    networkDiagnostic: com.dev.myapplication.domain.NetworkDiagnosticReport,
     networkInfoState: Resource<com.dev.myapplication.data.remote.NetworkInfoResponse>,
-    onFetchInfo: () -> Unit
+    onFetchInfo: () -> Unit,
+    onRunDiagnostics: () -> Unit
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -910,30 +917,68 @@ private fun UnifiedNetworkSection(
                     }
                 }
             }
+        }
 
-            OutlinedButton(
-                onClick = onFetchInfo,
-                contentPadding = ButtonDefaults.ContentPadding,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CloudDownload,
-                    contentDescription = "Fetch IP",
-                    modifier = Modifier.size(16.dp)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+        // Latency & DNS Diagnostic Line
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "⚡ Latency: ${if (networkDiagnostic.latencyMs >= 0) "${networkDiagnostic.latencyMs}ms" else "Unreachable"}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "DNS: ${networkDiagnostic.dnsStatus}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (networkDiagnostic.dnsStatus == "OK") StatusGood else StatusError
+                    )
+                }
+                Text(
+                    text = networkDiagnostic.rootCauseExplanation,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "IP Info", fontSize = 11.sp)
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(
+                    onClick = onRunDiagnostics,
+                    contentPadding = ButtonDefaults.ContentPadding
+                ) {
+                    Text(text = "Ping", fontSize = 10.sp)
+                }
+                OutlinedButton(
+                    onClick = onFetchInfo,
+                    contentPadding = ButtonDefaults.ContentPadding
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = "Fetch IP",
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(text = "IP Info", fontSize = 10.sp)
+                }
             }
         }
 
         when (networkInfoState) {
             is Resource.Idle -> { }
             is Resource.Loading -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Querying public network endpoint...", fontSize = 12.sp)
+                    Text(text = "Querying public network endpoint...", fontSize = 11.sp)
                 }
             }
             is Resource.Success -> {
@@ -941,18 +986,18 @@ private fun UnifiedNetworkSection(
                 val locationParts = listOfNotNull(info.city, info.region, info.country).filter { it.isNotBlank() }
                 val locationStr = if (locationParts.isNotEmpty()) locationParts.joinToString(", ") else "Global IP Network"
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "Location: $locationStr", fontSize = 11.sp)
+                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Location: $locationStr", fontSize = 10.sp)
                     if (!info.org.isNull0OrBlank()) {
-                        Text(text = "ISP / Org: ${info.org}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "ISP / Org: ${info.org}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             is Resource.Error -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
             }
         }
     }

@@ -22,6 +22,8 @@ import com.dev.myapplication.domain.AnomalyReport
 import com.dev.myapplication.domain.AutomationEngine
 import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.FramePerformanceState
+import com.dev.myapplication.domain.NetworkDiagnosticReport
+import com.dev.myapplication.domain.NetworkDiagnosticsEngine
 import com.dev.myapplication.domain.SentinelEngine
 import com.dev.myapplication.domain.SentinelReport
 import com.dev.myapplication.domain.SmartInsightsEngine
@@ -46,6 +48,7 @@ class DashboardViewModel @Inject constructor(
     private val smartInsightsEngine: SmartInsightsEngine,
     private val anomalyDetector: AnomalyDetector,
     private val sentinelEngine: SentinelEngine,
+    private val networkDiagnosticsEngine: NetworkDiagnosticsEngine,
     private val framePerformanceMonitor: FramePerformanceMonitor,
     private val networkInfoApi: NetworkInfoApi,
     private val workManager: WorkManager
@@ -129,6 +132,9 @@ class DashboardViewModel @Inject constructor(
     private val _networkInfoState = MutableStateFlow<Resource<NetworkInfoResponse>>(Resource.Idle)
     val networkInfoState: StateFlow<Resource<NetworkInfoResponse>> = _networkInfoState.asStateFlow()
 
+    private val _networkDiagnosticState = MutableStateFlow<NetworkDiagnosticReport>(NetworkDiagnosticReport())
+    val networkDiagnosticState: StateFlow<NetworkDiagnosticReport> = _networkDiagnosticState.asStateFlow()
+
     private val _workerState = MutableStateFlow<String>("IDLE")
     val workerState: StateFlow<String> = _workerState.asStateFlow()
 
@@ -142,6 +148,17 @@ class DashboardViewModel @Inject constructor(
             networkState.collect { nState ->
                 automationEngine.evaluateRules(batteryState.value, nState)
             }
+        }
+        runNetworkDiagnostics()
+    }
+
+    fun runNetworkDiagnostics(targetHost: String = "1.1.1.1") {
+        viewModelScope.launch {
+            val report = networkDiagnosticsEngine.runDiagnostics(
+                networkState = networkState.value,
+                targetHost = targetHost
+            )
+            _networkDiagnosticState.value = report
         }
     }
 

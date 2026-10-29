@@ -155,6 +155,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideNetworkDiagnosticsEngine(): com.dev.myapplication.domain.NetworkDiagnosticsEngine {
+        return com.dev.myapplication.domain.NetworkDiagnosticsEngine()
+    }
+
+    @Provides
+    @Singleton
     fun provideNetworkInfoApi(): NetworkInfoApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
