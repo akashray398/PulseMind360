@@ -58,6 +58,7 @@ import com.dev.myapplication.util.KeystoreVaultManager
 
 @Composable
 fun SettingsScreen(
+    onOpenPrivacyDashboard: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val prefs by viewModel.userPreferencesState.collectAsStateWithLifecycle()
@@ -446,6 +447,17 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
             )
+
+            Button(
+                onClick = onOpenPrivacyDashboard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Security, contentDescription = "Privacy Dashboard")
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Open Full Privacy Dashboard", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
         }
 
         // Privacy & Data Purge Card

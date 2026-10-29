@@ -61,6 +61,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setCollectBatteryTelemetry(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setCollectBatteryTelemetry(enabled)
+        }
+    }
+
+    fun setCollectNetworkTelemetry(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setCollectNetworkTelemetry(enabled)
+        }
+    }
+
+    fun setCollectFramePerformance(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setCollectFramePerformance(enabled)
+        }
+    }
+
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setNotificationsEnabled(enabled)

@@ -19,6 +19,7 @@ sealed class Screen(
     object History : Screen("history", "History", Icons.Default.History)
     object Settings : Screen("settings", "Settings", Icons.Default.Settings)
     object DeskStand : Screen("desk_stand", "Desk Mode", Icons.Default.Settings)
+    object PrivacyDashboard : Screen("privacy_dashboard", "Privacy", Icons.Default.Settings)
 }
 
 val navScreens = listOf(

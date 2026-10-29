@@ -23,6 +23,7 @@ import com.dev.myapplication.ui.deskstand.DeskStandScreen
 import com.dev.myapplication.ui.focustimer.FocusTimerScreen
 import com.dev.myapplication.ui.navigation.Screen
 import com.dev.myapplication.ui.navigation.navScreens
+import com.dev.myapplication.ui.privacy.PrivacyDashboardScreen
 import com.dev.myapplication.ui.settings.SettingsScreen
 import com.dev.myapplication.ui.timeline.TimelineScreen
 
@@ -32,7 +33,7 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showBottomBar = currentRoute != Screen.DeskStand.route
+    val showBottomBar = currentRoute != Screen.DeskStand.route && currentRoute != Screen.PrivacyDashboard.route
 
     Scaffold(
         bottomBar = {
@@ -97,10 +98,13 @@ fun MainScreen() {
                 TimelineScreen()
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(onOpenPrivacyDashboard = { navController.navigate(Screen.PrivacyDashboard.route) })
             }
             composable(Screen.DeskStand.route) {
                 DeskStandScreen(onClose = { navController.popBackStack() })
+            }
+            composable(Screen.PrivacyDashboard.route) {
+                PrivacyDashboardScreen(onClose = { navController.popBackStack() })
             }
         }
     }
