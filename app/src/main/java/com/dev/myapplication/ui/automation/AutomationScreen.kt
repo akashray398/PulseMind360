@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -334,20 +335,23 @@ fun AutomationRuleItem(
         hasGlowBorder = rule.isEnabled
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 12.dp)
+                    .padding(end = 8.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
@@ -360,9 +364,13 @@ fun AutomationRuleItem(
                         Text(
                             text = rule.name,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Surface(
                         color = prioColor.copy(alpha = 0.15f),
@@ -374,6 +382,7 @@ fun AutomationRuleItem(
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
                             color = prioColor,
+                            maxLines = 1,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -439,19 +448,21 @@ fun AutomationRuleItem(
                 }
             }
 
-            Switch(
-                checked = rule.isEnabled,
-                onCheckedChange = { onToggle() }
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Rule",
-                    tint = MaterialTheme.colorScheme.error
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Switch(
+                    checked = rule.isEnabled,
+                    onCheckedChange = { onToggle() }
                 )
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Rule",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
