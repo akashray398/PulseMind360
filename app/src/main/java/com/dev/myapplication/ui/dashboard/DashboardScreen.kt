@@ -86,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.data.remote.Resource
 import com.dev.myapplication.ui.components.AnimatedBatteryGauge
 import com.dev.myapplication.ui.components.BatteryTrendVisualizer
+import com.dev.myapplication.ui.components.DiagnosticBundleDialog
 import com.dev.myapplication.ui.components.GlassCard
 import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
@@ -116,6 +117,7 @@ fun DashboardScreen(
     val isTabletOrLandscape = configuration.screenWidthDp >= 600
 
     val scrollState = rememberScrollState()
+    var showSharingDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -137,21 +139,10 @@ fun DashboardScreen(
         )
 
         // Quick Action Chips Row
-        val context = LocalContext.current
         QuickActionsRow(
             onFetchNetwork = { viewModel.fetchNetworkInfo() },
             onTriggerSync = { viewModel.triggerSyncWorker() },
-            onExportReport = {
-                ReportGenerator.generateAndSharePdfReport(
-                    context = context,
-                    healthScore = healthScore,
-                    batteryState = batteryState,
-                    networkState = networkState,
-                    anomalyReport = anomaly,
-                    frameState = frameState,
-                    redactMetadata = true
-                )
-            },
+            onExportReport = { showSharingDialog = true },
             onOpenDeskStand = onOpenDeskStand
         )
 
@@ -212,6 +203,18 @@ fun DashboardScreen(
                 onRunWorker = { viewModel.triggerSyncWorker() }
             )
         }
+    }
+
+    if (showSharingDialog) {
+        DiagnosticBundleDialog(
+            healthScore = healthScore,
+            batteryState = batteryState,
+            networkState = networkState,
+            anomalyReport = anomaly,
+            frameState = frameState,
+            biometricVaultEnabled = false,
+            onDismiss = { showSharingDialog = false }
+        )
     }
 }
 
