@@ -9,6 +9,7 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 ## ✨ Features Overview
 
 ### 📊 1. Real-Time System Dashboard
+- **📌 Sticky Pinned Header Banner:** Fixed top title bar (`PULSEMIND 360 · 🟢 LIVE`) featuring animated gradient text and a pulsing live status emblem that stays pinned at the top while scrolling through telemetry cards.
 - **🧠 PulseMind Sentinel (Predictive Anomaly Intelligence):** Self-learning statistical AI engine ([SentinelEngine.kt](file:///D:/AndroidStudioProjects/PulseMind360/app/src/main/java/com/dev/myapplication/domain/SentinelEngine.kt)) housed in a compact, collapsible GlassCard with animated chevron rotation, pulsing emblem, spring expansion, confidence ratings, and root cause evidence matrix.
 - **🛡️ Android KeyStore AES-256 Encrypted Vault:** Zero-trust security vault using hardware-backed `AndroidKeyStore` AES/GCM/NoPadding encryption for local biometric credentials & token protection.
 - **📶 Network Bandwidth & Traffic Inspector:** Real-time upload/download speed gauge (KB/s & MB/s) and session data consumption counter via native `android.net.TrafficStats`.

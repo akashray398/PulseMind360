@@ -122,86 +122,95 @@ fun DashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // App Title Banner
+        // Sticky Pinned Title Banner
         TitleBanner()
 
-        // Hero System Health Overview Card
-        SystemHealthHeroCard(
-            healthScore = healthScore,
-            batteryLevel = batteryState.level,
-            isCharging = batteryState.isCharging,
-            networkConnected = networkState.isConnected,
-            hasAnomaly = anomaly.hasAnomaly
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Quick Action Chips Row
-        QuickActionsRow(
-            onFetchNetwork = { viewModel.fetchNetworkInfo() },
-            onTriggerSync = { viewModel.triggerSyncWorker() },
-            onExportReport = { showSharingDialog = true },
-            onOpenDeskStand = onOpenDeskStand
-        )
+        // Scrollable Dashboard Content Stack
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Hero System Health Overview Card
+            SystemHealthHeroCard(
+                healthScore = healthScore,
+                batteryLevel = batteryState.level,
+                isCharging = batteryState.isCharging,
+                networkConnected = networkState.isConnected,
+                hasAnomaly = anomaly.hasAnomaly
+            )
 
-        // PulseMind Sentinel Predictive AI Intelligence Card
-        SentinelIntelligenceCard(sentinelReport)
+            // Quick Action Chips Row
+            QuickActionsRow(
+                onFetchNetwork = { viewModel.fetchNetworkInfo() },
+                onTriggerSync = { viewModel.triggerSyncWorker() },
+                onExportReport = { showSharingDialog = true },
+                onOpenDeskStand = onOpenDeskStand
+            )
 
-        if (isTabletOrLandscape) {
-            // Dual Column Adaptive Layout for Wide Screen / Tablet
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            // PulseMind Sentinel Predictive AI Intelligence Card
+            SentinelIntelligenceCard(sentinelReport)
+
+            if (isTabletOrLandscape) {
+                // Dual Column Adaptive Layout for Wide Screen / Tablet
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    BatteryMetricsSection(batteryState, insights)
-                    BatteryTrendSection(insights.trendHistory)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        BatteryMetricsSection(batteryState, insights)
+                        BatteryTrendSection(insights.trendHistory)
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        SmartAIAdvisorySection(insights.healthAdvisories)
+                        UnifiedNetworkSection(
+                            networkState = networkState,
+                            throughputState = throughputState,
+                            networkDiagnostic = networkDiagnostic,
+                            networkInfoState = networkInfoState,
+                            onFetchInfo = { viewModel.fetchNetworkInfo() },
+                            onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
+                        )
+                        MemoryOptimizationSection()
+                        DeveloperDiagnosticsSection(
+                            frameState = frameState,
+                            workerState = workerState,
+                            onRunWorker = { viewModel.triggerSyncWorker() }
+                        )
+                    }
                 }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SmartAIAdvisorySection(insights.healthAdvisories)
-                    UnifiedNetworkSection(
-                        networkState = networkState,
-                        throughputState = throughputState,
-                        networkDiagnostic = networkDiagnostic,
-                        networkInfoState = networkInfoState,
-                        onFetchInfo = { viewModel.fetchNetworkInfo() },
-                        onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
-                    )
-                    MemoryOptimizationSection()
-                    DeveloperDiagnosticsSection(
-                        frameState = frameState,
-                        workerState = workerState,
-                        onRunWorker = { viewModel.triggerSyncWorker() }
-                    )
-                }
+            } else {
+                // Single Column Stack for Phones
+                BatteryMetricsSection(batteryState, insights)
+                BatteryTrendSection(insights.trendHistory)
+                SmartAIAdvisorySection(insights.healthAdvisories)
+                UnifiedNetworkSection(
+                    networkState = networkState,
+                    throughputState = throughputState,
+                    networkDiagnostic = networkDiagnostic,
+                    networkInfoState = networkInfoState,
+                    onFetchInfo = { viewModel.fetchNetworkInfo() },
+                    onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
+                )
+                MemoryOptimizationSection()
+                DeveloperDiagnosticsSection(
+                    frameState = frameState,
+                    workerState = workerState,
+                    onRunWorker = { viewModel.triggerSyncWorker() }
+                )
             }
-        } else {
-            // Single Column Stack for Phones
-            BatteryMetricsSection(batteryState, insights)
-            BatteryTrendSection(insights.trendHistory)
-            SmartAIAdvisorySection(insights.healthAdvisories)
-            UnifiedNetworkSection(
-                networkState = networkState,
-                throughputState = throughputState,
-                networkDiagnostic = networkDiagnostic,
-                networkInfoState = networkInfoState,
-                onFetchInfo = { viewModel.fetchNetworkInfo() },
-                onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
-            )
-            MemoryOptimizationSection()
-            DeveloperDiagnosticsSection(
-                frameState = frameState,
-                workerState = workerState,
-                onRunWorker = { viewModel.triggerSyncWorker() }
-            )
         }
     }
 
