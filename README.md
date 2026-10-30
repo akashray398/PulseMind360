@@ -52,6 +52,7 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 
 ### 🔒 6. Privacy Dashboard Screen & Biometric Security Vault
 - **🛡️ Dedicated Privacy Dashboard Screen ([PrivacyDashboardScreen.kt](file:///D:/AndroidStudioProjects/PulseMind360/app/src/main/java/com/dev/myapplication/ui/privacy/PrivacyDashboardScreen.kt)):** Full-screen privacy control center featuring per-feature collection toggles (Battery, Network, Frame Telemetry), real-time data item inventory audit matrix, protected-data access audit log (`PRIVACY_AUDIT`), and auto-redacted PDF exports.
+- **🔒 Biometric Vault Lock Screen ([BiometricVaultLockScreen.kt](file:///D:/AndroidStudioProjects/PulseMind360/app/src/main/java/com/dev/myapplication/ui/components/BiometricVaultLockScreen.kt)):** Full-screen biometric gate requiring fingerprint or device PIN authentication on app launch whenever the Biometric Security Vault is active.
 - **🔒 Persistent Real-Time Biometric Vault:** Fingerprint/PIN authentication persisted via DataStore; enforces real-time biometric verification before un-redacting metadata, purging data, or running KeyStore tests.
 - **Biometric Authentication:** Secure local vault protected by Android Credential / Biometric Hardware (Fingerprint / PIN).
 - **Theme Customization:** Toggle between Dark, Light, and System Theme modes.

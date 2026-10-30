@@ -18,6 +18,9 @@ interface ActivityLogDao {
     @Query("SELECT * FROM activity_logs WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY timestamp DESC")
     fun searchLogs(query: String): Flow<List<ActivityLogEntity>>
 
+    @Query("SELECT COUNT(*) FROM activity_logs")
+    suspend fun getLogsCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLog(log: ActivityLogEntity)
 
