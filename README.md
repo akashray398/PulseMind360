@@ -34,7 +34,8 @@ Designed with a futuristic glassmorphic UI theme, PulseMind 360 monitors real-ti
 - Configure custom **IF-THEN rules** (e.g., *IF Battery <= 20% THEN Trigger Notification* or *IF Metered Wi-Fi THEN Throttle Background Sync*).
 - Evaluates active rules reactively whenever battery or network state changes.
 
-### 📜 3. Activity Timeline & History
+### 📜 3. Activity Timeline & Incident Correlation Engine
+- **🔗 Incident Correlation Engine:** Automatically consolidates concurrent system events occurring within a sliding 15-minute window into unified **Correlated Incidents** ([IncidentEntity.kt](file:///D:/AndroidStudioProjects/PulseMind360/app/src/main/java/com/dev/myapplication/data/local/entity/IncidentEntity.kt)), complete with sub-event timelines, supporting evidence, recommended checks, and statistical correlation disclaimers.
 - Real-time logging of system monitor events, anomaly detections, and rule triggers.
 - Persisted locally using an **offline-first Room Database**.
 

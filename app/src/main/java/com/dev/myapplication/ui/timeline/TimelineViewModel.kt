@@ -3,7 +3,12 @@ package com.dev.myapplication.ui.timeline
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dev.myapplication.data.local.dao.ActivityLogDao
+import com.dev.myapplication.data.local.dao.IncidentDao
 import com.dev.myapplication.data.local.entity.ActivityLogEntity
+import com.dev.myapplication.data.local.entity.IncidentEntity
+import com.dev.myapplication.data.monitor.BatteryMonitor
+import com.dev.myapplication.data.monitor.NetworkMonitor
+import com.dev.myapplication.domain.IncidentCorrelationEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +24,11 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TimelineViewModel @Inject constructor(
-    private val activityLogDao: ActivityLogDao
+    private val activityLogDao: ActivityLogDao,
+    private val incidentDao: IncidentDao,
+    private val incidentCorrelationEngine: IncidentCorrelationEngine,
+    private val batteryMonitor: BatteryMonitor,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -45,6 +54,21 @@ class TimelineViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
+    val incidentsState: StateFlow<List<IncidentEntity>> = incidentDao.getAllIncidents()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    init {
+        viewModelScope.launch {
+            val bState = batteryMonitor.batteryState.value
+            val nState = networkMonitor.networkState.value
+            incidentCorrelationEngine.correlateSystemEvents(bState, nState)
+        }
+    }
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -56,6 +80,7 @@ class TimelineViewModel @Inject constructor(
     fun clearHistory() {
         viewModelScope.launch {
             activityLogDao.clearLogs()
+            incidentDao.clearIncidents()
         }
     }
 }

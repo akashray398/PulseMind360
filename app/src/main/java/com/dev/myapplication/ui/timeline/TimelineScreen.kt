@@ -1,5 +1,6 @@
 package com.dev.myapplication.ui.timeline
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timer
@@ -27,15 +30,19 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,7 +54,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dev.myapplication.data.local.entity.ActivityLogEntity
+import com.dev.myapplication.data.local.entity.IncidentEntity
 import com.dev.myapplication.ui.components.GlassCard
+import com.dev.myapplication.ui.theme.StatusError
+import com.dev.myapplication.ui.theme.StatusWarning
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,7 +69,9 @@ fun TimelineScreen(
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val logs by viewModel.logsState.collectAsStateWithLifecycle()
+    val incidents by viewModel.incidentsState.collectAsStateWithLifecycle()
 
+    var activeTab by remember { mutableIntStateOf(0) } // 0 = Activity Logs, 1 = Correlated Incidents
     var showClearDialog by remember { mutableStateOf(false) }
 
     val categories = listOf("ALL", "BATTERY", "NETWORK", "AUTOMATION", "WORKER", "FOCUS")
@@ -82,7 +94,7 @@ fun TimelineScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Timeline of Contextual Events & Automations",
+                    text = "Timeline of Contextual Events & Correlated Incidents",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -97,66 +109,123 @@ fun TimelineScreen(
             }
         }
 
-        // Live Search Input
-        OutlinedTextField(
-            value = query,
-            onValueChange = { viewModel.setSearchQuery(it) },
-            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search") },
-            trailingIcon = if (query.isNotBlank()) {
-                {
-                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                        Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear search")
-                    }
-                }
-            } else null,
-            placeholder = { Text("Search logs by keyword...", fontSize = 12.sp) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Filter Chips Row
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(categories) { cat ->
-                FilterChip(
-                    selected = selectedCategory == cat,
-                    onClick = { viewModel.setSelectedCategory(cat) },
-                    label = { Text(cat, fontSize = 11.sp) }
-                )
-            }
+        // Segmented Navigation Tabs
+        TabRow(
+            selectedTabIndex = activeTab,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            contentColor = MaterialTheme.colorScheme.primary
+        ) {
+            Tab(
+                selected = activeTab == 0,
+                onClick = { activeTab = 0 },
+                text = { Text("📜 Activity Logs (${logs.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+            Tab(
+                selected = activeTab == 1,
+                onClick = { activeTab = 1 },
+                text = { Text("🔗 Correlated Incidents (${incidents.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
         }
 
-        if (logs.isEmpty()) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp).fillMaxWidth()
+        if (activeTab == 0) {
+            // Live Search Input
+            OutlinedTextField(
+                value = query,
+                onValueChange = { viewModel.setSearchQuery(it) },
+                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = if (query.isNotBlank()) {
+                    {
+                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                } else null,
+                placeholder = { Text("Search logs by keyword...", fontSize = 12.sp) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Filter Chips Row
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(categories) { cat ->
+                    FilterChip(
+                        selected = selectedCategory == cat,
+                        onClick = { viewModel.setSelectedCategory(cat) },
+                        label = { Text(cat, fontSize = 11.sp) }
+                    )
+                }
+            }
+
+            if (logs.isEmpty()) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp).fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "No logs",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Text(
+                            text = "No Activity Logs Found",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Events triggered by monitors, automations, or workers will appear here.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "No logs",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "No Activity Logs Found",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Events triggered by monitors, automations, or workers will appear here.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    items(logs, key = { it.id }) { log ->
+                        ActivityLogItem(log = log)
+                    }
                 }
             }
         } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(logs, key = { it.id }) { log ->
-                    ActivityLogItem(log = log)
+            // Correlated Incidents Tab
+            if (incidents.isEmpty()) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp).fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Link,
+                            contentDescription = "No incidents",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Text(
+                            text = "No Correlated Incidents Detected",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "When multiple co-occurring events are detected, the Correlation Engine will group them here.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(incidents, key = { it.id }) { incident ->
+                        CorrelatedIncidentItem(incident = incident)
+                    }
                 }
             }
         }
@@ -165,8 +234,8 @@ fun TimelineScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear Activity History?") },
-            text = { Text("This will permanently delete all stored activity logs.") },
+            title = { Text("Clear All History?") },
+            text = { Text("This will permanently delete all stored activity logs and correlated incidents.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -183,6 +252,96 @@ fun TimelineScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun CorrelatedIncidentItem(incident: IncidentEntity) {
+    val dateFormat = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
+
+    val (statusColor, statusText) = when (incident.severity) {
+        "CRITICAL" -> StatusError to "CRITICAL INCIDENT"
+        "WARNING" -> StatusWarning to "WARNING INCIDENT"
+        else -> MaterialTheme.colorScheme.primary to "CORRELATED EVENT"
+    }
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        hasGlowBorder = incident.severity == "CRITICAL"
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Link,
+                contentDescription = "Incident",
+                tint = statusColor,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = incident.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = statusColor
+                )
+                Text(
+                    text = "${incident.eventCount} Co-Occurring Events · ${dateFormat.format(Date(incident.startTime))}",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Surface(
+                color = statusColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f))
+            ) {
+                Text(
+                    text = statusText,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Correlated Sub-Events:",
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = incident.correlatedEventsSummary,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+        Text(
+            text = "Evidence: ${incident.supportingEvidence}",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Explanation: ${incident.correlationExplanation}",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Checks: ${incident.recommendedChecks}",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.secondary
         )
     }
 }

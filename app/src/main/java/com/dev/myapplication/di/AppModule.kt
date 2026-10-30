@@ -59,6 +59,19 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideIncidentDao(db: AppDatabase): com.dev.myapplication.data.local.dao.IncidentDao = db.incidentDao()
+
+    @Provides
+    @Singleton
+    fun provideIncidentCorrelationEngine(
+        activityLogDao: ActivityLogDao,
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao
+    ): com.dev.myapplication.domain.IncidentCorrelationEngine {
+        return com.dev.myapplication.domain.IncidentCorrelationEngine(activityLogDao, incidentDao)
+    }
+
+    @Provides
+    @Singleton
     fun provideSentinelBaselineDao(db: AppDatabase): com.dev.myapplication.data.local.dao.SentinelBaselineDao = db.sentinelBaselineDao()
 
     @Provides
