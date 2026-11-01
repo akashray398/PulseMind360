@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -15,6 +16,7 @@ sealed class Screen(
     val icon: ImageVector
 ) {
     object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard)
+    object LiveContext : Screen("live_context", "Context", Icons.Default.Sensors)
     object Copilot : Screen("copilot", "Copilot", Icons.Default.AutoAwesome)
     object Automations : Screen("automations", "Automations", Icons.Default.Autorenew)
     object FocusMode : Screen("focus_mode", "Focus", Icons.Default.Timer)
@@ -26,6 +28,7 @@ sealed class Screen(
 
 val navScreens = listOf(
     Screen.Dashboard,
+    Screen.LiveContext,
     Screen.Copilot,
     Screen.Automations,
     Screen.FocusMode,

@@ -6,6 +6,7 @@ import androidx.work.WorkManager
 import com.dev.myapplication.data.local.AppDatabase
 import com.dev.myapplication.data.local.dao.ActivityLogDao
 import com.dev.myapplication.data.local.dao.AutomationRuleDao
+import com.dev.myapplication.data.local.dao.ContextSnapshotDao
 import com.dev.myapplication.data.local.dao.FocusSessionDao
 import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.NetworkMonitor
@@ -15,6 +16,7 @@ import com.dev.myapplication.domain.AnomalyDetector
 import com.dev.myapplication.domain.AutomationEngine
 import com.dev.myapplication.domain.FocusTimerManager
 import com.dev.myapplication.domain.FramePerformanceMonitor
+import com.dev.myapplication.domain.LiveContextEngine
 import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
@@ -60,6 +62,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideIncidentDao(db: AppDatabase): com.dev.myapplication.data.local.dao.IncidentDao = db.incidentDao()
+
+    @Provides
+    @Singleton
+    fun provideContextSnapshotDao(db: AppDatabase): ContextSnapshotDao = db.contextSnapshotDao()
 
     @Provides
     @Singleton
@@ -162,12 +168,42 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideLiveContextEngine(
+        @ApplicationContext context: Context,
+        batteryMonitor: BatteryMonitor,
+        networkMonitor: NetworkMonitor,
+        anomalyDetector: AnomalyDetector,
+        sentinelEngine: com.dev.myapplication.domain.SentinelEngine,
+        contextSnapshotDao: ContextSnapshotDao,
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
+        activityLogDao: ActivityLogDao
+    ): LiveContextEngine {
+        return LiveContextEngine(
+            context = context,
+            batteryMonitor = batteryMonitor,
+            networkMonitor = networkMonitor,
+            anomalyDetector = anomalyDetector,
+            sentinelEngine = sentinelEngine,
+            contextSnapshotDao = contextSnapshotDao,
+            incidentDao = incidentDao,
+            activityLogDao = activityLogDao
+        )
+    }
+
+    @Provides
+    @Singleton
     fun provideAiCopilotEngine(
         incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
         sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao,
-        activityLogDao: ActivityLogDao
+        activityLogDao: ActivityLogDao,
+        liveContextEngine: LiveContextEngine
     ): com.dev.myapplication.domain.AiCopilotEngine {
-        return com.dev.myapplication.domain.AiCopilotEngine(incidentDao, sentinelBaselineDao, activityLogDao)
+        return com.dev.myapplication.domain.AiCopilotEngine(
+            incidentDao = incidentDao,
+            sentinelBaselineDao = sentinelBaselineDao,
+            activityLogDao = activityLogDao,
+            liveContextEngine = liveContextEngine
+        )
     }
 
     @Provides

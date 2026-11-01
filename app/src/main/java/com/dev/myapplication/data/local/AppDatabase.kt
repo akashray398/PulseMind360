@@ -4,11 +4,13 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.dev.myapplication.data.local.dao.ActivityLogDao
 import com.dev.myapplication.data.local.dao.AutomationRuleDao
+import com.dev.myapplication.data.local.dao.ContextSnapshotDao
 import com.dev.myapplication.data.local.dao.FocusSessionDao
 import com.dev.myapplication.data.local.dao.IncidentDao
 import com.dev.myapplication.data.local.dao.SentinelBaselineDao
 import com.dev.myapplication.data.local.entity.ActivityLogEntity
 import com.dev.myapplication.data.local.entity.AutomationRuleEntity
+import com.dev.myapplication.data.local.entity.ContextSnapshotEntity
 import com.dev.myapplication.data.local.entity.FocusSessionEntity
 import com.dev.myapplication.data.local.entity.IncidentEntity
 import com.dev.myapplication.data.local.entity.SentinelBaselineEntity
@@ -19,9 +21,10 @@ import com.dev.myapplication.data.local.entity.SentinelBaselineEntity
         AutomationRuleEntity::class,
         FocusSessionEntity::class,
         SentinelBaselineEntity::class,
-        IncidentEntity::class
+        IncidentEntity::class,
+        ContextSnapshotEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,4 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun focusSessionDao(): FocusSessionDao
     abstract fun sentinelBaselineDao(): SentinelBaselineDao
     abstract fun incidentDao(): IncidentDao
+    abstract fun contextSnapshotDao(): ContextSnapshotDao
 }

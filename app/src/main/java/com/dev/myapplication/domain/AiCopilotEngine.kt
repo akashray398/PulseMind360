@@ -22,7 +22,8 @@ data class CopilotResponse(
 class AiCopilotEngine @Inject constructor(
     private val incidentDao: IncidentDao,
     private val sentinelBaselineDao: SentinelBaselineDao,
-    private val activityLogDao: ActivityLogDao
+    private val activityLogDao: ActivityLogDao,
+    private val liveContextEngine: LiveContextEngine
 ) {
 
     suspend fun answerQuery(
@@ -34,6 +35,8 @@ class AiCopilotEngine @Inject constructor(
         val baseline = sentinelBaselineDao.getBaseline()
         val incidents = incidentDao.getAllIncidents().firstOrNull() ?: emptyList()
         val recentLogs = activityLogDao.getAllLogs().firstOrNull() ?: emptyList()
+
+        val liveCtx = liveContextEngine.getCurrentContext()
 
         val avgDrain = baseline?.avgDrainRatePerHour ?: 7.5f
         val avgTemp = baseline?.avgTemperature ?: 31.0f
@@ -53,10 +56,11 @@ class AiCopilotEngine @Inject constructor(
                 facts.add("Current Battery Level: $currentLevel% (${if (isCharging) "Charging via ${batteryState.plugType}" else "Discharging"})")
                 facts.add("Active Discharge Velocity: ${"%.1f".format(activeDrainRate)}%/hr (Learned 7-day Baseline: ${"%.1f".format(avgDrain)}%/hr)")
                 facts.add("Battery Temperature: ${currentTemp}°C")
+                facts.add("Live State Classification: ${liveCtx.stateClassification}")
 
                 val drainDelta = activeDrainRate - avgDrain
                 val hypothesis = if (drainDelta > 3.0f) {
-                    "Discharge rate is ${"%.1f".format(drainDelta)}%/hr higher than normal baseline. Primary evidence points to high thermal state (${currentTemp}°C) and active network activity."
+                    "Discharge rate is ${"%.1f".format(drainDelta)}%/hr higher than normal baseline. Primary evidence points to high thermal state (${currentTemp}°C) and RAM usage (${liveCtx.ramUsagePct}%)."
                 } else {
                     "Battery consumption is operating within your normal learned 7-day statistical parameters."
                 }
@@ -81,7 +85,8 @@ class AiCopilotEngine @Inject constructor(
                 val facts = listOf(
                     "Current Device Temperature: ${currentTemp}°C",
                     "7-Day Average Baseline Temp: ${"%.1f".format(avgTemp)}°C",
-                    "Thermal Delta: ${if (currentTemp >= avgTemp) "+" else ""}${"%.1f".format(currentTemp - avgTemp)}°C from baseline"
+                    "Thermal Delta: ${if (currentTemp >= avgTemp) "+" else ""}${"%.1f".format(currentTemp - avgTemp)}°C from baseline",
+                    "RAM Utilization: ${liveCtx.ramUsagePct}% (${liveCtx.usedMemMb}MB used)"
                 )
 
                 val hypothesis = if (currentTemp >= 38f) {
@@ -139,6 +144,7 @@ class AiCopilotEngine @Inject constructor(
                 val facts = mutableListOf<String>()
                 facts.add("Total Correlated Incidents: ${incidents.size}")
                 facts.add("Recent Activity Logs Tracked: ${recentLogs.size}")
+                facts.add("Live Device Classification: ${liveCtx.stateClassification}")
                 if (incidents.isNotEmpty()) {
                     val lastIncident = incidents.first()
                     facts.add("Latest Incident: [${lastIncident.severity}] ${lastIncident.title}")
@@ -170,11 +176,12 @@ class AiCopilotEngine @Inject constructor(
                 val facts = listOf(
                     "Battery State: $currentLevel% · ${if (isCharging) "Charging" else "Discharging (${"%.1f".format(activeDrainRate)}%/hr)"}",
                     "Thermal Reading: ${currentTemp}°C (Baseline: ${"%.1f".format(avgTemp)}°C)",
+                    "RAM Utilization: ${liveCtx.ramUsagePct}% (${liveCtx.usedMemMb} MB / ${liveCtx.totalMemMb} MB)",
                     "Network Status: ${networkState.transportType} (${if (networkState.isConnected) "Connected" else "Disconnected"})",
-                    "Learned Sentinel Samples: $sampleCount samples aggregated"
+                    "State Classification: ${liveCtx.stateClassification}"
                 )
 
-                val hypothesis = "PulseMind Sentinel AI continuous baseline correlation: Device health index is currently ${if (currentTemp > 38f || activeDrainRate > 12f) "MODERATE (Attention Suggested)" else "EXCELLENT (All Systems Nominal)"}."
+                val hypothesis = "PulseMind Live Context Engine continuous evaluation: Device health index is currently ${if (currentTemp > 38f || activeDrainRate > 12f) "MODERATE (Attention Suggested)" else "EXCELLENT (All Systems Nominal)"}."
 
                 val actions = listOf(
                     "Maintain smart charging habits (keep battery level between 20% and 80%).",

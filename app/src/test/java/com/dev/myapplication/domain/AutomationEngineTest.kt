@@ -6,7 +6,6 @@ import com.dev.myapplication.data.local.entity.ActivityLogEntity
 import com.dev.myapplication.data.local.entity.AutomationRuleEntity
 import com.dev.myapplication.data.monitor.BatteryState
 import com.dev.myapplication.data.monitor.NetworkState
-import com.dev.myapplication.util.NotificationHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -37,9 +36,14 @@ class FakeAutomationRuleDao : AutomationRuleDao {
         if (index != -1) rules[index] = rules[index].copy(isEnabled = isEnabled)
     }
 
-    override suspend fun updateLastTriggered(id: Long, timestamp: Long) {
+    override suspend fun updateLastTriggered(id: Long, timestamp: Long, reason: String) {
         val index = rules.indexOfFirst { it.id == id }
-        if (index != -1) rules[index] = rules[index].copy(lastTriggeredAt = timestamp)
+        if (index != -1) rules[index] = rules[index].copy(lastTriggeredAt = timestamp, lastExecutionReason = reason)
+    }
+
+    override suspend fun updateExecutionReason(id: Long, reason: String) {
+        val index = rules.indexOfFirst { it.id == id }
+        if (index != -1) rules[index] = rules[index].copy(lastExecutionReason = reason)
     }
 
     override suspend fun deleteRule(rule: AutomationRuleEntity) {
@@ -56,6 +60,8 @@ class FakeActivityLogDao : ActivityLogDao {
 
     override fun searchLogs(query: String): Flow<List<ActivityLogEntity>> =
         MutableStateFlow(logs.filter { it.title.contains(query) || it.description.contains(query) })
+
+    override suspend fun getLogsCount(): Int = logs.size
 
     override suspend fun insertLog(log: ActivityLogEntity) {
         logs.add(log)
