@@ -162,6 +162,16 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAiCopilotEngine(
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
+        sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao,
+        activityLogDao: ActivityLogDao
+    ): com.dev.myapplication.domain.AiCopilotEngine {
+        return com.dev.myapplication.domain.AiCopilotEngine(incidentDao, sentinelBaselineDao, activityLogDao)
+    }
+
+    @Provides
+    @Singleton
     fun provideFramePerformanceMonitor(): FramePerformanceMonitor {
         return FramePerformanceMonitor()
     }

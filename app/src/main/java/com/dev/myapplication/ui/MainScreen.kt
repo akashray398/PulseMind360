@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dev.myapplication.ui.automation.AutomationScreen
+import com.dev.myapplication.ui.copilot.CopilotScreen
 import com.dev.myapplication.ui.dashboard.DashboardScreen
 import com.dev.myapplication.ui.deskstand.DeskStandScreen
 import com.dev.myapplication.ui.focustimer.FocusTimerScreen
@@ -87,6 +88,9 @@ fun MainScreen() {
         ) {
             composable(Screen.Dashboard.route) {
                 DashboardScreen(onOpenDeskStand = { navController.navigate(Screen.DeskStand.route) })
+            }
+            composable(Screen.Copilot.route) {
+                CopilotScreen()
             }
             composable(Screen.Automations.route) {
                 AutomationScreen()
