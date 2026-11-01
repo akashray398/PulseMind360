@@ -2,13 +2,7 @@ package com.dev.myapplication.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -20,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,12 +31,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DeveloperMode
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Memory
@@ -49,19 +42,18 @@ import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,12 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -91,14 +78,13 @@ import com.dev.myapplication.ui.components.GlassCard
 import com.dev.myapplication.ui.theme.StatusError
 import com.dev.myapplication.ui.theme.StatusGood
 import com.dev.myapplication.ui.theme.StatusWarning
-import com.dev.myapplication.ui.theme.VioletSecondary
 import com.dev.myapplication.util.MemoryOptimizer
-import com.dev.myapplication.util.NetworkThroughputState
-import com.dev.myapplication.util.ReportGenerator
 
 @Composable
 fun DashboardScreen(
     onOpenDeskStand: () -> Unit = {},
+    onOpenFocus: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val batteryState by viewModel.batteryState.collectAsStateWithLifecycle()
@@ -113,9 +99,8 @@ fun DashboardScreen(
     val sentinelReport by viewModel.sentinelReportState.collectAsStateWithLifecycle()
     val networkDiagnostic by viewModel.networkDiagnosticState.collectAsStateWithLifecycle()
 
-    val configuration = LocalConfiguration.current
-    val isTabletOrLandscape = configuration.screenWidthDp >= 600
-
+    val context = LocalContext.current
+    val memoryState = remember(batteryState, networkState) { MemoryOptimizer.getMemoryState(context) }
     val scrollState = rememberScrollState()
     var showSharingDialog by remember { mutableStateOf(false) }
 
@@ -124,93 +109,69 @@ fun DashboardScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Sticky Pinned Title Banner
-        TitleBanner()
+        // Sleek Clean Title Header
+        DashboardHeader(
+            onExportReport = { showSharingDialog = true },
+            onOpenDeskStand = onOpenDeskStand,
+            onOpenFocus = onOpenFocus,
+            onOpenHistory = onOpenHistory
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Scrollable Dashboard Content Stack
+        // Main Dashboard Content Stack
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Hero System Health Overview Card
-            SystemHealthHeroCard(
+            // 1. Executive System Health Card
+            SystemHealthCommandCard(
                 healthScore = healthScore,
                 batteryLevel = batteryState.level,
                 isCharging = batteryState.isCharging,
+                batteryTemp = batteryState.temperature,
                 networkConnected = networkState.isConnected,
+                networkTransport = networkState.transportType,
+                ramUsagePct = memoryState.usagePct,
                 hasAnomaly = anomaly.hasAnomaly
             )
 
-            // Quick Action Chips Row
-            QuickActionsRow(
-                onFetchNetwork = { viewModel.fetchNetworkInfo() },
-                onTriggerSync = { viewModel.triggerSyncWorker() },
-                onExportReport = { showSharingDialog = true },
-                onOpenDeskStand = onOpenDeskStand
+            // 2. Sentinel AI & Smart Advisory Block
+            SentinelAndAdvisoryCard(
+                sentinelReport = sentinelReport,
+                advisories = insights.healthAdvisories
             )
 
-            // PulseMind Sentinel Predictive AI Intelligence Card
-            SentinelIntelligenceCard(sentinelReport)
+            // 3. Battery & Thermal Forecast + Trend Curve
+            BatteryThermalCard(
+                batteryState = batteryState,
+                insights = insights
+            )
 
-            if (isTabletOrLandscape) {
-                // Dual Column Adaptive Layout for Wide Screen / Tablet
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        BatteryMetricsSection(batteryState, insights)
-                        BatteryTrendSection(insights.trendHistory)
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        SmartAIAdvisorySection(insights.healthAdvisories)
-                        UnifiedNetworkSection(
-                            networkState = networkState,
-                            throughputState = throughputState,
-                            networkDiagnostic = networkDiagnostic,
-                            networkInfoState = networkInfoState,
-                            onFetchInfo = { viewModel.fetchNetworkInfo() },
-                            onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
-                        )
-                        MemoryOptimizationSection()
-                        DeveloperDiagnosticsSection(
-                            frameState = frameState,
-                            workerState = workerState,
-                            onRunWorker = { viewModel.triggerSyncWorker() }
-                        )
-                    }
-                }
-            } else {
-                // Single Column Stack for Phones
-                BatteryMetricsSection(batteryState, insights)
-                BatteryTrendSection(insights.trendHistory)
-                SmartAIAdvisorySection(insights.healthAdvisories)
-                UnifiedNetworkSection(
-                    networkState = networkState,
-                    throughputState = throughputState,
-                    networkDiagnostic = networkDiagnostic,
-                    networkInfoState = networkInfoState,
-                    onFetchInfo = { viewModel.fetchNetworkInfo() },
-                    onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
-                )
-                MemoryOptimizationSection()
-                DeveloperDiagnosticsSection(
-                    frameState = frameState,
-                    workerState = workerState,
-                    onRunWorker = { viewModel.triggerSyncWorker() }
-                )
-            }
+            // 4. Network & Bandwidth Hub
+            NetworkHubCard(
+                networkState = networkState,
+                throughputState = throughputState,
+                networkDiagnostic = networkDiagnostic,
+                networkInfoState = networkInfoState,
+                onFetchInfo = { viewModel.fetchNetworkInfo() },
+                onRunDiagnostics = { viewModel.runNetworkDiagnostics() }
+            )
+
+            // 5. Memory & RAM Diagnostic
+            MemoryCard()
+
+            // 6. Developer Telemetry (Collapsible)
+            DeveloperTelemetryCard(
+                frameState = frameState,
+                workerState = workerState,
+                onRunWorker = { viewModel.triggerSyncWorker() }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 
@@ -228,660 +189,361 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun TitleBanner() {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth()
+private fun DashboardHeader(
+    onExportReport: () -> Unit,
+    onOpenDeskStand: () -> Unit,
+    onOpenFocus: () -> Unit,
+    onOpenHistory: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp, horizontal = 2.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                val infiniteTransition = rememberInfiniteTransition(label = "HeaderLogoPulse")
-                val pulseAlpha by infiniteTransition.animateFloat(
-                    initialValue = 0.65f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1200, easing = LinearEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "PulseAlpha"
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
-                val pulseScale by infiniteTransition.animateFloat(
-                    initialValue = 0.95f,
-                    targetValue = 1.08f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1200, easing = LinearEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "PulseScale"
-                )
-
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .graphicsLayer {
-                            scaleX = pulseScale
-                            scaleY = pulseScale
-                            alpha = pulseAlpha
-                        }
-                        .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = "PulseMind Emblem",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    val gradientOffset by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 600f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(3500, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "TitleGradient"
-                    )
-
-                    val titleBrush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            VioletSecondary,
-                            MaterialTheme.colorScheme.primary
-                        ),
-                        start = Offset(gradientOffset, 0f),
-                        end = Offset(gradientOffset + 300f, 300f)
-                    )
-
-                    Text(
-                        text = "PULSEMIND 360",
-                        style = TextStyle(
-                            brush = titleBrush,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.5.sp
-                        )
-                    )
-                    Text(
-                        text = "Real-Time Contextual System Monitor",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
-
-            Surface(
-                color = StatusGood.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, StatusGood.copy(alpha = 0.3f))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = "PULSEMIND 360",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(6.dp)
-                            .background(StatusGood, CircleShape)
+                            .clip(CircleShape)
+                            .background(StatusGood)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "LIVE",
+                        text = "LIVE SYSTEM MONITOR",
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StatusGood,
-                        letterSpacing = 1.sp
+                        fontWeight = FontWeight.SemiBold,
+                        color = StatusGood
                     )
                 }
+            }
+        }
+
+        // Action Toolbar Buttons
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(onClick = onOpenFocus) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = "Focus Timer",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onOpenHistory) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = "Timeline",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onOpenDeskStand) {
+                Icon(
+                    imageVector = Icons.Default.Nightlight,
+                    contentDescription = "Desk Mode",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+            IconButton(onClick = onExportReport) {
+                Icon(
+                    imageVector = Icons.Default.Assessment,
+                    contentDescription = "PDF Report",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SystemHealthHeroCard(
+private fun SystemHealthCommandCard(
     healthScore: Int,
     batteryLevel: Int,
     isCharging: Boolean,
+    batteryTemp: Float,
     networkConnected: Boolean,
+    networkTransport: String,
+    ramUsagePct: Int,
     hasAnomaly: Boolean
 ) {
     val animatedScore by animateIntAsState(
         targetValue = healthScore,
-        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-        label = "HealthScoreAnimation"
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "HealthScore"
     )
 
-    val (scoreColor, scoreLabel) = when {
+    val (statusColor, statusText) = when {
         animatedScore >= 85 -> StatusGood to "OPTIMAL HEALTH"
         animatedScore >= 65 -> StatusWarning to "STABLE"
-        else -> StatusError to "ACTION REQUIRED"
+        else -> StatusError to "ATTENTION REQUIRED"
     }
 
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        hasGlowBorder = true
+        hasGlowBorder = false
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Radial Progress Indicator Score Ring
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(84.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(
-                    progress = { animatedScore / 100f },
-                    modifier = Modifier.size(80.dp),
-                    color = scoreColor,
-                    strokeWidth = 7.dp,
-                    trackColor = scoreColor.copy(alpha = 0.15f)
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "$animatedScore%",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "SCORE",
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        letterSpacing = 1.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Surface(
-                    color = scoreColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, scoreColor.copy(alpha = 0.3f))
-                ) {
-                    Text(
-                        text = scoreLabel,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = scoreColor,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = statusColor.copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(statusColor)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "$animatedScore% · $statusText",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor
+                            )
+                        }
+                    }
                 }
 
                 Text(
-                    text = "Contextual System Health",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
+                    text = if (hasAnomaly) "⚠️ Anomaly Flagged" else "✓ Systems Clear",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (hasAnomaly) StatusWarning else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 2.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.BatteryChargingFull,
-                            contentDescription = "Battery",
-                            tint = if (isCharging) StatusGood else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "$batteryLevel%", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (networkConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
-                            contentDescription = "Network",
-                            tint = if (networkConnected) StatusGood else StatusError,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (networkConnected) "Online" else "Offline",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (hasAnomaly) Icons.Default.Warning else Icons.Default.CheckCircle,
-                            contentDescription = "Anomaly",
-                            tint = if (hasAnomaly) StatusError else StatusGood,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (hasAnomaly) "Alert" else "Clear",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            // 4-Vitals Metric Chips Grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                VitalChip(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.BatteryChargingFull,
+                    value = "$batteryLevel%",
+                    subtext = if (isCharging) "Charging" else "Discharging",
+                    color = MaterialTheme.colorScheme.primary
+                )
+                VitalChip(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Thermostat,
+                    value = "${batteryTemp}°C",
+                    subtext = if (batteryTemp > 38f) "Warm" else "Normal",
+                    color = if (batteryTemp > 38f) StatusError else StatusGood
+                )
+                VitalChip(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Wifi,
+                    value = if (networkConnected) networkTransport else "Offline",
+                    subtext = if (networkConnected) "Connected" else "No Data",
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                VitalChip(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Memory,
+                    value = "$ramUsagePct%",
+                    subtext = "RAM Used",
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
         }
     }
 }
 
 @Composable
-private fun QuickActionsRow(
-    onFetchNetwork: () -> Unit,
-    onTriggerSync: () -> Unit,
-    onExportReport: () -> Unit,
-    onOpenDeskStand: () -> Unit
+private fun VitalChip(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    subtext: String,
+    color: androidx.compose.ui.graphics.Color
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onFetchNetwork() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Public,
-                        contentDescription = "IP Context",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "IP Context",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onTriggerSync() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Sync,
-                        contentDescription = "Run Sync",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Sync Worker",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onExportReport() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Assessment,
-                        contentDescription = "Audit PDF",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Export PDF Report",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onOpenDeskStand() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Nightlight,
-                        contentDescription = "Desk Monitor",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Ambient Desk Monitor",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = subtext, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun BatteryMetricsSection(
-    batteryState: com.dev.myapplication.data.monitor.BatteryState,
-    insights: com.dev.myapplication.domain.SystemInsights
+private fun SentinelAndAdvisoryCard(
+    sentinelReport: com.dev.myapplication.domain.SentinelReport,
+    advisories: List<String>
 ) {
+    var isExpanded by remember { mutableStateOf(sentinelReport.hasAnomaly) }
+
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        hasGlowBorder = batteryState.isCharging
+        hasGlowBorder = sentinelReport.hasAnomaly
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded },
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                AnimatedBatteryGauge(
-                    level = batteryState.level,
-                    isCharging = batteryState.isCharging
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(text = "Battery & Thermal AI Forecast", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        if (insights.isSmartChargeGuardActive) {
-                            Surface(
-                                color = StatusWarning.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
-                            ) {
-                                Text(
-                                    text = "80% GUARD",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StatusWarning,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Psychology,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = sentinelReport.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Sentinel AI · ${sentinelReport.confidenceScore}% Confidence",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-
-                    Text(text = "Status: ${batteryState.status} (${batteryState.plugType})", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = "Estimate: ${insights.timeRemainingWithMargin}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                    Text(text = "Rate Velocity: ${insights.dischargeRatePctPerHour}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "Thermal Velocity: ${insights.thermalVelocityText}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            if (insights.isBaselineDeviation) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Text(
-                    text = insights.baselineDeviationText,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = StatusWarning
-                )
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    Text(
+                        text = "• ${sentinelReport.rootCauseExplanation}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    advisories.take(2).forEach { advisory ->
+                        Text(
+                            text = "• $advisory",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryThermalCard(
+    batteryState: com.dev.myapplication.data.monitor.BatteryState,
+    insights: com.dev.myapplication.domain.SystemInsights
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AnimatedBatteryGauge(
+                        level = batteryState.level,
+                        isCharging = batteryState.isCharging
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Battery & Thermal Status",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = insights.timeRemainingWithMargin,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = insights.dischargeRatePctPerHour,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-            Text(
-                text = "ℹ️ ${insights.disclaimerText}",
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Trend Visualizer Line Chart
+            BatteryTrendVisualizer(dataPoints = insights.trendHistory)
         }
     }
 }
 
 @Composable
-private fun BatteryTrendSection(trendHistory: List<com.dev.myapplication.ui.components.BatteryDataPoint>) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        BatteryTrendVisualizer(dataPoints = trendHistory)
-    }
-}
-
-@Composable
-private fun SmartAIAdvisorySection(advisories: List<String>) {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        hasGlowBorder = true
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.AutoAwesome,
-                contentDescription = "AI Insights",
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(26.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Smart AI System Advisory",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            advisories.forEach { advisory ->
-                Text(
-                    text = "• $advisory",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SentinelIntelligenceCard(sentinelReport: com.dev.myapplication.domain.SentinelReport) {
-    var isExpanded by remember { mutableStateOf(sentinelReport.hasAnomaly) }
-
-    val (statusColor, statusLabel) = when (sentinelReport.severity) {
-        "CRITICAL" -> StatusError to "CRITICAL SENTINEL SPIKE"
-        "WARNING" -> StatusWarning to "PREDICTIVE ANOMALY"
-        else -> StatusGood to "SENTINEL AI NOMINAL"
-    }
-
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
-        hasGlowBorder = sentinelReport.hasAnomaly
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val infiniteTransition = rememberInfiniteTransition(label = "SentinelEmblemPulse")
-            val emblemAlpha by infiniteTransition.animateFloat(
-                initialValue = 0.7f,
-                targetValue = 1.0f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1400, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "EmblemAlpha"
-            )
-
-            Icon(
-                imageVector = Icons.Default.Psychology,
-                contentDescription = "Sentinel Intelligence",
-                tint = statusColor,
-                modifier = Modifier
-                    .size(26.dp)
-                    .graphicsLayer { alpha = if (sentinelReport.hasAnomaly) emblemAlpha else 1.0f }
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = sentinelReport.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = statusColor
-                )
-                Text(
-                    text = "${sentinelReport.confidenceScore}% Confidence · Self-Learning Baseline",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Surface(
-                color = statusColor.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(6.dp),
-                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text = statusLabel,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = statusColor,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            val rotationAngle by animateFloatAsState(
-                targetValue = if (isExpanded) 180f else 0f,
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                label = "ChevronRotation"
-            )
-
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(20.dp)
-                    .graphicsLayer { rotationZ = rotationAngle }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(),
-            exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut()
-        ) {
-            Column(
-                modifier = Modifier.padding(top = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = "Root Cause: ${sentinelReport.rootCauseExplanation}",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Evidence: ${sentinelReport.supportingEvidence}",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Action: ${sentinelReport.recommendedAction}",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                Text(
-                    text = sentinelReport.baselineSummary,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UnifiedNetworkSection(
+private fun NetworkHubCard(
     networkState: com.dev.myapplication.data.monitor.NetworkState,
     throughputState: com.dev.myapplication.util.NetworkThroughputState,
     networkDiagnostic: com.dev.myapplication.domain.NetworkDiagnosticReport,
@@ -890,252 +552,155 @@ private fun UnifiedNetworkSection(
     onRunDiagnostics: () -> Unit
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = if (networkState.isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
-                contentDescription = "Network Status",
-                tint = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Network & Bandwidth Hub", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    if (throughputState.isHighBandwidthActive) {
-                        Surface(
-                            color = StatusWarning.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp),
-                            border = BorderStroke(1.dp, StatusWarning.copy(alpha = 0.4f))
-                        ) {
-                            Text(
-                                text = "HIGH TRAFFIC",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusWarning,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (networkState.isConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Network & Bandwidth",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = if (networkState.isConnected) "Connected (${networkState.transportType})" else "Offline",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
-                Text(
-                    text = if (networkState.isConnected) "Connected (${networkState.transportType}) · ${if (networkState.isMetered) "Metered" else "Unmetered"}" else "Disconnected",
-                    fontSize = 12.sp,
-                    color = if (networkState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                // Live Speed Throughput Indicators
-                val dlSpeedStr = if (throughputState.downloadKbps >= 1024f) {
-                    "%.1f MB/s".format(throughputState.downloadKbps / 1024f)
-                } else {
-                    "%.0f KB/s".format(throughputState.downloadKbps)
-                }
-
-                val ulSpeedStr = if (throughputState.uploadKbps >= 1024f) {
-                    "%.1f MB/s".format(throughputState.uploadKbps / 1024f)
-                } else {
-                    "%.0f KB/s".format(throughputState.uploadKbps)
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 2.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                // Uniformly Formatted Action Buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilledTonalButton(
+                        onClick = onRunDiagnostics,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowDownward,
-                            contentDescription = "Download",
-                            tint = MaterialTheme.colorScheme.primary,
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = null,
                             modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(text = "DL: $dlSpeedStr", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Ping", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalButton(
+                        onClick = onFetchInfo,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = "Upload",
-                            tint = MaterialTheme.colorScheme.secondary,
+                            imageVector = Icons.Default.Public,
+                            contentDescription = null,
                             modifier = Modifier.size(13.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(text = "UL: $ulSpeedStr", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "IP Info", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-        }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-        // Latency & DNS Diagnostic Line
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "⚡ Latency: ${if (networkDiagnostic.latencyMs >= 0) "${networkDiagnostic.latencyMs}ms" else "Unreachable"}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "DNS: ${networkDiagnostic.dnsStatus}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (networkDiagnostic.dnsStatus == "OK") StatusGood else StatusError
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "DL: ${throughputState.downloadKbps.toInt()} KB/s", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "UL: ${throughputState.uploadKbps.toInt()} KB/s", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
                 }
                 Text(
-                    text = networkDiagnostic.rootCauseExplanation,
-                    fontSize = 10.sp,
+                    text = "Latency: ${if (networkDiagnostic.latencyMs >= 0) "${networkDiagnostic.latencyMs}ms" else "N/A"}",
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(
-                    onClick = onRunDiagnostics,
-                    contentPadding = ButtonDefaults.ContentPadding
-                ) {
-                    Text(text = "Ping", fontSize = 10.sp)
+            when (networkInfoState) {
+                is Resource.Success -> {
+                    val info = networkInfoState.data
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    Text(text = "Public IP: ${info.ip} (${info.city ?: "Global"}, ${info.country ?: ""})", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                 }
-                OutlinedButton(
-                    onClick = onFetchInfo,
-                    contentPadding = ButtonDefaults.ContentPadding
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = "Fetch IP",
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(text = "IP Info", fontSize = 10.sp)
-                }
-            }
-        }
-
-        when (networkInfoState) {
-            is Resource.Idle -> { }
-            is Resource.Loading -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Querying public network endpoint...", fontSize = 11.sp)
-                }
-            }
-            is Resource.Success -> {
-                val info = networkInfoState.data
-                val locationParts = listOfNotNull(info.city, info.region, info.country).filter { it.isNotBlank() }
-                val locationStr = if (locationParts.isNotEmpty()) locationParts.joinToString(", ") else "Global IP Network"
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = "Public IP: ${info.ip}", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
-                    Text(text = "Location: $locationStr", fontSize = 10.sp)
-                    if (!info.org.isNull0OrBlank()) {
-                        Text(text = "ISP / Org: ${info.org}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                is Resource.Loading -> {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "Fetching IP info...", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-            is Resource.Error -> {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                Text(text = "Error: ${networkInfoState.message}", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                else -> {}
             }
         }
     }
 }
 
 @Composable
-private fun MemoryOptimizationSection() {
+private fun MemoryCard() {
     val context = LocalContext.current
     var memState by remember { mutableStateOf(MemoryOptimizer.getMemoryState(context)) }
     var freedMsg by remember { mutableStateOf<String?>(null) }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Memory,
-                contentDescription = "RAM Optimizer",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "RAM & Cache Memory Diagnostic", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                val usedGbStr = "%.1f".format(memState.usedMemMb / 1024f)
-                val totalGbStr = "%.1f".format(memState.totalMemMb / 1024f)
-                Text(
-                    text = "RAM: ${usedGbStr}GB / ${totalGbStr}GB (${memState.usagePct}% Used)",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Memory,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(text = "RAM Memory", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    val usedGb = "%.1f".format(memState.usedMemMb / 1024f)
+                    val totalGb = "%.1f".format(memState.totalMemMb / 1024f)
+                    Text(text = "${usedGb}GB / ${totalGb}GB (${memState.usagePct}% Used)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
-            Button(
+            FilledTonalButton(
                 onClick = {
                     val freed = MemoryOptimizer.trimMemoryCaches(context)
                     memState = MemoryOptimizer.getMemoryState(context)
-                    freedMsg = "Freed ${freed} MB cache memory!"
+                    freedMsg = "Freed ${freed} MB"
                 },
-                contentPadding = ButtonDefaults.ContentPadding
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                modifier = Modifier.height(32.dp)
             ) {
-                Text(text = "Trim RAM", fontSize = 11.sp)
+                Text(text = freedMsg ?: "Trim RAM", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val progressColor = when {
-            memState.usagePct >= 85 -> StatusError
-            memState.usagePct >= 70 -> StatusWarning
-            else -> StatusGood
-        }
-
-        LinearProgressIndicator(
-            progress = { memState.usagePct / 100f },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
-            color = progressColor,
-            trackColor = progressColor.copy(alpha = 0.15f)
-        )
-
-        freedMsg?.let { msg ->
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = msg,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = StatusGood
-            )
         }
     }
 }
 
 @Composable
-private fun DeveloperDiagnosticsSection(
+private fun DeveloperTelemetryCard(
     frameState: com.dev.myapplication.domain.FramePerformanceState,
     workerState: String,
     onRunWorker: () -> Unit
@@ -1143,96 +708,59 @@ private fun DeveloperDiagnosticsSection(
     var expanded by remember { mutableStateOf(false) }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-        ) {
-            Icon(
-                imageVector = Icons.Default.DeveloperMode,
-                contentDescription = "Developer Telemetry",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = "Developer & System Telemetry",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-
-            Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = "Expand",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(top = 12.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                // Frame Telemetry
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Speed,
-                        contentDescription = "FPS",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Default.DeveloperMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(text = "UI Frame Render Telemetry", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text(
-                            text = "${frameState.currentFps} FPS | ${frameState.frameDurationMs}ms frame time (${frameState.status})",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Text(
+                        text = "System Telemetry & WorkManager",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                // WorkManager
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Sync,
-                        contentDescription = "Worker",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Background Worker Task", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text(
-                            text = "WorkManager Status: $workerState",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    Button(
-                        onClick = onRunWorker,
-                        contentPadding = ButtonDefaults.ContentPadding
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Run Worker", fontSize = 11.sp)
+                        Text(text = "Render FPS: ${frameState.currentFps} (${frameState.frameDurationMs}ms)", fontSize = 11.sp)
+                        Button(onClick = onRunWorker, contentPadding = ButtonDefaults.ContentPadding) {
+                            Text(text = "Sync Worker", fontSize = 10.sp)
+                        }
                     }
                 }
             }
         }
     }
 }
-
-private fun String?.isNull0OrBlank(): Boolean = this == null || this.isBlank() || this == "N/A"

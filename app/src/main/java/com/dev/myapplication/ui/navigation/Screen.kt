@@ -31,7 +31,5 @@ val navScreens = listOf(
     Screen.LiveContext,
     Screen.Copilot,
     Screen.Automations,
-    Screen.FocusMode,
-    Screen.History,
     Screen.Settings
 )

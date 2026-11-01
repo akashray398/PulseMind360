@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -42,7 +44,8 @@ fun MainScreen() {
             if (showBottomBar) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 8.dp
                 ) {
                     navScreens.forEach { screen ->
                         val isSelected = currentRoute == screen.route
@@ -68,7 +71,8 @@ fun MainScreen() {
                             label = {
                                 Text(
                                     text = screen.title,
-                                    fontSize = 11.sp
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -88,7 +92,11 @@ fun MainScreen() {
             modifier = Modifier.padding(if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues())
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen(onOpenDeskStand = { navController.navigate(Screen.DeskStand.route) })
+                DashboardScreen(
+                    onOpenDeskStand = { navController.navigate(Screen.DeskStand.route) },
+                    onOpenFocus = { navController.navigate(Screen.FocusMode.route) },
+                    onOpenHistory = { navController.navigate(Screen.History.route) }
+                )
             }
             composable(Screen.LiveContext.route) {
                 LiveContextScreen()

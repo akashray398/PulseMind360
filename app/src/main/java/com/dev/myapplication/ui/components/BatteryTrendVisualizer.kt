@@ -66,17 +66,16 @@ fun BatteryTrendVisualizer(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Live Battery & Thermal Curve",
+                    text = "Battery & Thermal Velocity Curve",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (latestPoint != null) {
                     val tempStr = "%.1f".format(latestPoint.temp)
                     Text(
-                        text = "Current: ${latestPoint.level}% · ${tempStr}°C",
+                        text = "Real-time Telemetry: ${latestPoint.level}% · ${tempStr}°C",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -117,18 +116,18 @@ fun BatteryTrendVisualizer(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Chart Canvas
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp)
+                .height(120.dp)
         ) {
             val width = size.width
             val totalHeight = size.height
-            val chartBottom = totalHeight - 22.dp.toPx() // Leave room for time x-axis
-            val chartTop = 16.dp.toPx() // Leave room for top value labels
+            val chartBottom = totalHeight - 20.dp.toPx() // Leave room for time x-axis
+            val chartTop = 12.dp.toPx()
             val chartHeight = chartBottom - chartTop
 
             val maxPoints = dataPoints.size
@@ -190,46 +189,24 @@ fun BatteryTrendVisualizer(
             drawPath(
                 path = levelFillPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(CyanPrimary.copy(alpha = 0.20f), Color.Transparent),
+                    colors = listOf(CyanPrimary.copy(alpha = 0.15f), Color.Transparent),
                     startY = chartTop,
                     endY = chartBottom
                 )
             )
 
             // Draw Curved Stroke Lines
-            drawPath(path = levelPath, color = CyanPrimary, style = Stroke(width = 2.5.dp.toPx()))
+            drawPath(path = levelPath, color = CyanPrimary, style = Stroke(width = 2.dp.toPx()))
             drawPath(path = tempPath, color = VioletSecondary, style = Stroke(width = 2.dp.toPx()))
 
-            // Draw Dots, Value Labels, and X-Axis Time Labels
+            // Draw Dots and Clean Labels
             dataPoints.forEachIndexed { index, dp ->
                 val (x, levelY) = levelPoints[index]
                 val (_, tempY) = tempPoints[index]
 
                 // Draw circles for data points
-                drawCircle(color = CyanPrimary, radius = 3.5.dp.toPx(), center = Offset(x, levelY))
+                drawCircle(color = CyanPrimary, radius = 3.dp.toPx(), center = Offset(x, levelY))
                 drawCircle(color = VioletSecondary, radius = 3.dp.toPx(), center = Offset(x, tempY))
-
-                // Draw Numerical Battery Value Label above point
-                val levelLabel = "${dp.level}%"
-                val levelTextLayout = textMeasurer.measure(levelLabel, style = labelStyle.copy(color = CyanPrimary))
-                val levelTextX = (x - levelTextLayout.size.width / 2f).coerceIn(0f, width - levelTextLayout.size.width)
-                val levelTextY = (levelY - levelTextLayout.size.height - 3.dp.toPx()).coerceAtLeast(0f)
-
-                drawText(
-                    textLayoutResult = levelTextLayout,
-                    topLeft = Offset(levelTextX, levelTextY)
-                )
-
-                // Draw Numerical Temp Value Label below/above point
-                val tempLabel = "${"%.0f".format(dp.temp)}°"
-                val tempTextLayout = textMeasurer.measure(tempLabel, style = labelStyle.copy(color = VioletSecondary))
-                val tempTextX = (x - tempTextLayout.size.width / 2f).coerceIn(0f, width - tempTextLayout.size.width)
-                val tempTextY = (tempY + 3.dp.toPx()).coerceAtMost(chartBottom - tempTextLayout.size.height)
-
-                drawText(
-                    textLayoutResult = tempTextLayout,
-                    topLeft = Offset(tempTextX, tempTextY)
-                )
 
                 // Draw X-Axis Time Label below graph line
                 val timeLayout = textMeasurer.measure(dp.timeLabel, style = timeStyle)
