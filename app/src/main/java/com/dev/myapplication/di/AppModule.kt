@@ -7,6 +7,7 @@ import com.dev.myapplication.data.local.AppDatabase
 import com.dev.myapplication.data.local.dao.ActivityLogDao
 import com.dev.myapplication.data.local.dao.AutomationRuleDao
 import com.dev.myapplication.data.local.dao.ContextSnapshotDao
+import com.dev.myapplication.data.local.dao.CopilotConversationDao
 import com.dev.myapplication.data.local.dao.FocusSessionDao
 import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.NetworkMonitor
@@ -17,7 +18,10 @@ import com.dev.myapplication.domain.AutomationEngine
 import com.dev.myapplication.domain.FocusTimerManager
 import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.LiveContextEngine
+import com.dev.myapplication.domain.NetworkDiagnosticsEngine
 import com.dev.myapplication.domain.SmartInsightsEngine
+import com.dev.myapplication.domain.copilot.CopilotIntentEngine
+import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
 import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
 import dagger.Module
@@ -66,6 +70,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideContextSnapshotDao(db: AppDatabase): ContextSnapshotDao = db.contextSnapshotDao()
+
+    @Provides
+    @Singleton
+    fun provideCopilotConversationDao(db: AppDatabase): CopilotConversationDao = db.copilotConversationDao()
 
     @Provides
     @Singleton
@@ -192,17 +200,55 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideCopilotToolDispatcher(
+        @ApplicationContext context: Context,
+        liveContextEngine: LiveContextEngine,
+        batteryMonitor: BatteryMonitor,
+        networkMonitor: NetworkMonitor,
+        networkDiagnosticsEngine: NetworkDiagnosticsEngine,
+        smartInsightsEngine: SmartInsightsEngine,
+        sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao,
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
+        activityLogDao: ActivityLogDao
+    ): CopilotToolDispatcher {
+        return CopilotToolDispatcher(
+            context = context,
+            liveContextEngine = liveContextEngine,
+            batteryMonitor = batteryMonitor,
+            networkMonitor = networkMonitor,
+            networkDiagnosticsEngine = networkDiagnosticsEngine,
+            smartInsightsEngine = smartInsightsEngine,
+            sentinelBaselineDao = sentinelBaselineDao,
+            incidentDao = incidentDao,
+            activityLogDao = activityLogDao
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideCopilotIntentEngine(): CopilotIntentEngine {
+        return CopilotIntentEngine()
+    }
+
+    @Provides
+    @Singleton
     fun provideAiCopilotEngine(
         incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
         sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao,
         activityLogDao: ActivityLogDao,
-        liveContextEngine: LiveContextEngine
+        liveContextEngine: LiveContextEngine,
+        copilotToolDispatcher: CopilotToolDispatcher,
+        copilotIntentEngine: CopilotIntentEngine,
+        copilotConversationDao: CopilotConversationDao
     ): com.dev.myapplication.domain.AiCopilotEngine {
         return com.dev.myapplication.domain.AiCopilotEngine(
             incidentDao = incidentDao,
             sentinelBaselineDao = sentinelBaselineDao,
             activityLogDao = activityLogDao,
-            liveContextEngine = liveContextEngine
+            liveContextEngine = liveContextEngine,
+            copilotToolDispatcher = copilotToolDispatcher,
+            copilotIntentEngine = copilotIntentEngine,
+            copilotConversationDao = copilotConversationDao
         )
     }
 
@@ -214,8 +260,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideNetworkDiagnosticsEngine(): com.dev.myapplication.domain.NetworkDiagnosticsEngine {
-        return com.dev.myapplication.domain.NetworkDiagnosticsEngine()
+    fun provideNetworkDiagnosticsEngine(): NetworkDiagnosticsEngine {
+        return NetworkDiagnosticsEngine()
     }
 
     @Provides

@@ -1,6 +1,8 @@
 package com.dev.myapplication.ui.copilot
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,31 +26,43 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Badge
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,8 +72,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dev.myapplication.domain.CopilotResponse
+import com.dev.myapplication.domain.copilot.CopilotResponseDetail
+import com.dev.myapplication.domain.copilot.UserFeedback
 import com.dev.myapplication.ui.components.GlassCard
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,10 +89,12 @@ fun CopilotScreen(
     val inputText by viewModel.inputText.collectAsStateWithLifecycle()
     val batteryState by viewModel.batteryState.collectAsStateWithLifecycle()
     val networkState by viewModel.networkState.collectAsStateWithLifecycle()
+    val conversations by viewModel.conversations.collectAsStateWithLifecycle()
+    val pendingAuthAction by viewModel.pendingAuthAction.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
+    var showSessionsSheet by remember { mutableStateOf(false) }
 
-    // Scroll to bottom when new messages arrive
     LaunchedEffect(messages.size, isThinking) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -148,10 +168,17 @@ fun CopilotScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.clearHistory() }) {
+                    IconButton(onClick = { showSessionsSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Forum,
+                            contentDescription = "Sessions",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = { viewModel.clearCurrentSession() }) {
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = "Clear History",
+                            contentDescription = "Clear Session",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -168,7 +195,7 @@ fun CopilotScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Chat Messages Stream
+            // Chat Message Stream
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -183,8 +210,15 @@ fun CopilotScreen(
                     if (message.sender == ChatSender.USER) {
                         UserMessageBubble(text = message.text ?: "")
                     } else {
-                        if (message.response != null) {
-                            CopilotResponseCard(response = message.response)
+                        if (message.responseDetail != null) {
+                            CopilotResponseDetailCard(
+                                messageId = message.id,
+                                response = message.responseDetail,
+                                feedback = message.feedback,
+                                onRateFeedback = { fb -> viewModel.rateMessageFeedback(message.id, fb) },
+                                onSelectFollowUp = { fUp -> viewModel.sendQuery(fUp) },
+                                onRequestAction = { act -> viewModel.requestActionExecution(act) }
+                            )
                         } else if (message.text != null) {
                             AiTextMessageBubble(text = message.text)
                         }
@@ -200,7 +234,7 @@ fun CopilotScreen(
                 item { Spacer(modifier = Modifier.height(8.dp)) }
             }
 
-            // Quick Prompts Chips Bar
+            // Quick Prompt Chips
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -281,6 +315,86 @@ fun CopilotScreen(
                 }
             }
         }
+
+        // Action Approval Authorization Dialog
+        pendingAuthAction?.let { actionText ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissActionExecution() },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                title = {
+                    Text(text = "Authorize Action", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                },
+                text = {
+                    Text(
+                        text = "Do you want to proceed with: '$actionText'?\n\nAll proposed system actions are validated and non-destructive.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.confirmActionExecution() }) {
+                        Text("Authorize", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissActionExecution() }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Sessions Bottom Sheet
+        if (showSessionsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSessionsSheet = false },
+                sheetState = rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Conversation Sessions",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(onClick = {
+                            viewModel.startNewSession()
+                            showSessionsSheet = false
+                        }) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "New Session")
+                        }
+                    }
+
+                    conversations.forEach { conv ->
+                        GlassCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.switchSession(conv.id)
+                                    showSessionsSheet = false
+                                }
+                        ) {
+                            Text(text = conv.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -335,121 +449,231 @@ fun AiTextMessageBubble(text: String) {
 }
 
 @Composable
-fun CopilotResponseCard(response: CopilotResponse) {
+fun CopilotResponseDetailCard(
+    messageId: String,
+    response: CopilotResponseDetail,
+    feedback: UserFeedback,
+    onRateFeedback: (UserFeedback) -> Unit,
+    onSelectFollowUp: (String) -> Unit,
+    onRequestAction: (String) -> Unit
+) {
+    val sdf = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val timeStr = sdf.format(Date(response.timestamp))
+
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = 16.dp,
-        hasGlowBorder = true
+        hasGlowBorder = response.severity != "INFO"
     ) {
-        // Response Header: Title + Confidence Badge
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Psychology,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = response.summary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Header Title + Severity + Confidence Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${response.confidenceScore}% Confidence",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Psychology,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = response.summary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Section 1: Measured Facts
-        Text(
-            text = "📊 Measured Facts",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(start = 4.dp)
-        ) {
-            response.measuredFacts.forEach { fact ->
-                Row(verticalAlignment = Alignment.Top) {
-                    Text(text = "• ", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(text = fact, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = "${response.confidenceScore}% Confidence",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            // Relevant Metrics Badges Row
+            if (response.relevantMetrics.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(response.relevantMetrics.entries.toList()) { entry ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "${entry.key}: ${entry.value}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
-        // Section 2: Hypothesis & Evidence
-        Text(
-            text = "🔍 Hypothesis & Evidence Correlation",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(10.dp)
-        ) {
+            // Section 1: Measured Facts
             Text(
-                text = response.hypothesisAndEvidence,
+                text = "📊 Measured Facts",
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 18.sp
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
-        }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                response.measuredFacts.forEach { fact ->
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(text = "• ", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = fact, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            // Section 2: Hypothesis & Correlation Evidence
+            Text(
+                text = "🔍 Hypothesis & Evidence Correlation",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(10.dp)
+            ) {
+                Text(
+                    text = response.hypothesisAndEvidence,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 18.sp
+                )
+            }
 
-        // Section 3: Recommended Actions
-        Text(
-            text = "✅ Safe Recommended Actions",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.tertiary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(start = 4.dp)
-        ) {
-            response.recommendedActions.forEach { action ->
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .padding(top = 2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = action, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            // Section 3: Recommended Actions
+            if (response.recommendedActions.isNotEmpty()) {
+                Text(
+                    text = "✅ Safe Recommended Actions",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    response.recommendedActions.forEach { action ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.Top,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .padding(top = 2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = action, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                onClick = { onRequestAction(action) },
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "Authorize",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 4: Suggested Follow-up Questions Chips
+            if (response.suggestedFollowUps.isNotEmpty()) {
+                Text(
+                    text = "❓ Suggested Follow-ups",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(response.suggestedFollowUps) { followUp ->
+                        Surface(
+                            onClick = { onSelectFollowUp(followUp) },
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                        ) {
+                            Text(
+                                text = followUp,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Footer Row: Timestamp & Feedback Rating (Thumbs Up / Down)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = timeStr, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onRateFeedback(UserFeedback.THUMBS_UP) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Helpful",
+                            tint = if (feedback == UserFeedback.THUMBS_UP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onRateFeedback(UserFeedback.THUMBS_DOWN) },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbDown,
+                            contentDescription = "Not Helpful",
+                            tint = if (feedback == UserFeedback.THUMBS_DOWN) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -477,7 +701,7 @@ fun ThinkingBubble() {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "PulseMind AI is correlating telemetry...",
+                    text = "PulseMind AI is correlating device telemetry...",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
