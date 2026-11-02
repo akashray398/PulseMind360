@@ -13,8 +13,17 @@ interface IncidentDao {
     @Query("SELECT * FROM correlated_incidents ORDER BY startTime DESC")
     fun getAllIncidents(): Flow<List<IncidentEntity>>
 
+    @Query("SELECT * FROM correlated_incidents WHERE id = :id")
+    suspend fun getIncidentById(id: Long): IncidentEntity?
+
+    @Query("SELECT * FROM correlated_incidents WHERE title = :title AND startTime >= :minStartTime ORDER BY startTime DESC LIMIT 1")
+    suspend fun getRecentIncidentByTitle(title: String, minStartTime: Long): IncidentEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIncident(incident: IncidentEntity): Long
+
+    @Query("UPDATE correlated_incidents SET status = :status, resolutionNotes = :notes WHERE id = :id")
+    suspend fun updateIncidentStatus(id: Long, status: String, notes: String)
 
     @Query("DELETE FROM correlated_incidents")
     suspend fun clearIncidents()

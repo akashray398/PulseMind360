@@ -1,6 +1,7 @@
 package com.dev.myapplication.ui.timeline
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,8 +72,9 @@ fun TimelineScreen(
     val logs by viewModel.logsState.collectAsStateWithLifecycle()
     val incidents by viewModel.incidentsState.collectAsStateWithLifecycle()
 
-    var activeTab by remember { mutableIntStateOf(0) } // 0 = Activity Logs, 1 = Correlated Incidents
+    var activeTab by remember { mutableIntStateOf(0) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var selectedIncidentForDialog by remember { mutableStateOf<IncidentEntity?>(null) }
 
     val categories = listOf("ALL", "BATTERY", "NETWORK", "AUTOMATION", "WORKER", "FOCUS")
 
@@ -224,11 +226,25 @@ fun TimelineScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(incidents, key = { it.id }) { incident ->
-                        CorrelatedIncidentItem(incident = incident)
+                        CorrelatedIncidentItem(
+                            incident = incident,
+                            onClick = { selectedIncidentForDialog = incident }
+                        )
                     }
                 }
             }
         }
+    }
+
+    // Incident Investigation Detail Dialog
+    selectedIncidentForDialog?.let { inc ->
+        IncidentDetailDialog(
+            incident = inc,
+            onDismiss = { selectedIncidentForDialog = null },
+            onUpdateStatus = { id, status, notes ->
+                viewModel.updateIncidentStatus(id, status, notes)
+            }
+        )
     }
 
     if (showClearDialog) {
@@ -257,17 +273,22 @@ fun TimelineScreen(
 }
 
 @Composable
-fun CorrelatedIncidentItem(incident: IncidentEntity) {
+fun CorrelatedIncidentItem(
+    incident: IncidentEntity,
+    onClick: () -> Unit
+) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
 
     val (statusColor, statusText) = when (incident.severity) {
-        "CRITICAL" -> StatusError to "CRITICAL INCIDENT"
-        "WARNING" -> StatusWarning to "WARNING INCIDENT"
-        else -> MaterialTheme.colorScheme.primary to "CORRELATED EVENT"
+        "CRITICAL" -> StatusError to "CRITICAL"
+        "WARNING" -> StatusWarning to "WARNING"
+        else -> MaterialTheme.colorScheme.primary to "INFO"
     }
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         hasGlowBorder = incident.severity == "CRITICAL"
     ) {
         Row(
@@ -291,7 +312,7 @@ fun CorrelatedIncidentItem(incident: IncidentEntity) {
                     color = statusColor
                 )
                 Text(
-                    text = "${incident.eventCount} Co-Occurring Events · ${dateFormat.format(Date(incident.startTime))}",
+                    text = "Status: ${incident.status} · ${incident.eventCount} Events · ${dateFormat.format(Date(incident.startTime))}",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -334,14 +355,10 @@ fun CorrelatedIncidentItem(incident: IncidentEntity) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Explanation: ${incident.correlationExplanation}",
+            text = "Tap to open full investigation report & status controls",
             fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = "Checks: ${incident.recommendedChecks}",
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.secondary
         )
     }
 }

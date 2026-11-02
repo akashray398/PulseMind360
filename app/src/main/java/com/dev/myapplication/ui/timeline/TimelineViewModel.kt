@@ -69,7 +69,6 @@ class TimelineViewModel @Inject constructor(
             val nState = networkMonitor.networkState.value
 
             if (count == 0) {
-                // Initial Seed Logs so Activity History is always populated & active
                 activityLogDao.insertLog(
                     ActivityLogEntity(
                         category = "BATTERY",
@@ -109,6 +108,12 @@ class TimelineViewModel @Inject constructor(
 
     fun setSelectedCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun updateIncidentStatus(id: Long, newStatus: String, notes: String) {
+        viewModelScope.launch {
+            incidentDao.updateIncidentStatus(id, newStatus, notes)
+        }
     }
 
     fun clearHistory() {

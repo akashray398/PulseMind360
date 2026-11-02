@@ -9,12 +9,16 @@ data class IncidentEntity(
     val id: Long = 0,
     val title: String,
     val severity: String = "WARNING", // INFO, WARNING, CRITICAL
+    val status: String = "DETECTED", // DETECTED, INVESTIGATING, MONITORING, RESOLVED, DISMISSED
     val startTime: Long = System.currentTimeMillis(),
     val endTime: Long = System.currentTimeMillis(),
     val eventCount: Int = 1,
     val correlatedEventsSummary: String,
     val supportingEvidence: String,
     val correlationExplanation: String,
+    val rankedExplanations: String = "",
     val recommendedChecks: String,
+    val resolutionNotes: String = "",
+    val confidenceScore: Int = 92,
     val createdAt: Long = System.currentTimeMillis()
 )

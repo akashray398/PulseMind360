@@ -29,7 +29,7 @@ import com.dev.myapplication.data.local.entity.SentinelBaselineEntity
         CopilotConversationEntity::class,
         CopilotMessageEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
