@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(
@@ -17,6 +18,7 @@ sealed class Screen(
 ) {
     object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard)
     object LiveContext : Screen("live_context", "Context", Icons.Default.Sensors)
+    object Predictions : Screen("predictions", "Predictions", Icons.Default.TrendingUp)
     object Copilot : Screen("copilot", "Copilot", Icons.Default.AutoAwesome)
     object Automations : Screen("automations", "Automations", Icons.Default.Autorenew)
     object FocusMode : Screen("focus_mode", "Focus", Icons.Default.Timer)

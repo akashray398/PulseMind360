@@ -27,6 +27,7 @@ import com.dev.myapplication.ui.deskstand.DeskStandScreen
 import com.dev.myapplication.ui.focustimer.FocusTimerScreen
 import com.dev.myapplication.ui.navigation.Screen
 import com.dev.myapplication.ui.navigation.navScreens
+import com.dev.myapplication.ui.predictive.PredictiveIntelligenceScreen
 import com.dev.myapplication.ui.privacy.PrivacyDashboardScreen
 import com.dev.myapplication.ui.settings.SettingsScreen
 import com.dev.myapplication.ui.timeline.TimelineScreen
@@ -100,6 +101,9 @@ fun MainScreen() {
             }
             composable(Screen.LiveContext.route) {
                 LiveContextScreen()
+            }
+            composable(Screen.Predictions.route) {
+                PredictiveIntelligenceScreen()
             }
             composable(Screen.Copilot.route) {
                 CopilotScreen()
