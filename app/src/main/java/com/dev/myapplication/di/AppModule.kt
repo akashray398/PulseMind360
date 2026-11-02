@@ -23,6 +23,7 @@ import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.domain.copilot.CopilotIntentEngine
 import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
+import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
 import dagger.Module
@@ -205,6 +206,14 @@ object AppModule {
         contextSnapshotDao: ContextSnapshotDao
     ): PredictiveIntelligenceEngine {
         return PredictiveIntelligenceEngine(contextSnapshotDao)
+    }
+
+    @Provides
+    @Singleton
+    fun providePrivacyRiskEngine(
+        @ApplicationContext context: Context
+    ): PrivacyRiskEngine {
+        return PrivacyRiskEngine(context)
     }
 
     @Provides

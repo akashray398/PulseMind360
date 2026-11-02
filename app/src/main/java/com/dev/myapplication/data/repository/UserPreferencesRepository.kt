@@ -24,6 +24,7 @@ data class UserPreferences(
     val collectBatteryTelemetry: Boolean = true,
     val collectNetworkTelemetry: Boolean = true,
     val collectFramePerformance: Boolean = true,
+    val allowBackendSync: Boolean = true,
     val notificationsEnabled: Boolean = true,
     val syncIntervalMinutes: Int = 15,
     val retentionDays: Int = 30
@@ -42,6 +43,7 @@ class UserPreferencesRepository(private val context: Context) {
         val COLLECT_BATTERY_TELEMETRY = booleanPreferencesKey("collect_battery_telemetry")
         val COLLECT_NETWORK_TELEMETRY = booleanPreferencesKey("collect_network_telemetry")
         val COLLECT_FRAME_PERFORMANCE = booleanPreferencesKey("collect_frame_performance")
+        val ALLOW_BACKEND_SYNC = booleanPreferencesKey("allow_backend_sync")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val SYNC_INTERVAL_MINUTES = intPreferencesKey("sync_interval_minutes")
         val RETENTION_DAYS = intPreferencesKey("retention_days")
@@ -60,6 +62,7 @@ class UserPreferencesRepository(private val context: Context) {
                 collectBatteryTelemetry = preferences[PreferenceKeys.COLLECT_BATTERY_TELEMETRY] ?: true,
                 collectNetworkTelemetry = preferences[PreferenceKeys.COLLECT_NETWORK_TELEMETRY] ?: true,
                 collectFramePerformance = preferences[PreferenceKeys.COLLECT_FRAME_PERFORMANCE] ?: true,
+                allowBackendSync = preferences[PreferenceKeys.ALLOW_BACKEND_SYNC] ?: true,
                 notificationsEnabled = preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] ?: true,
                 syncIntervalMinutes = preferences[PreferenceKeys.SYNC_INTERVAL_MINUTES] ?: 15,
                 retentionDays = preferences[PreferenceKeys.RETENTION_DAYS] ?: 30
@@ -123,6 +126,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setCollectFramePerformance(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.COLLECT_FRAME_PERFORMANCE] = enabled
+        }
+    }
+
+    suspend fun setAllowBackendSync(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.ALLOW_BACKEND_SYNC] = enabled
         }
     }
 
