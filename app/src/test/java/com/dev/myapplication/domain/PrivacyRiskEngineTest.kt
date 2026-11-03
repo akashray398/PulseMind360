@@ -1,5 +1,6 @@
 package com.dev.myapplication.domain
 
+import android.content.Context
 import android.content.ContextWrapper
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import org.junit.Assert.assertEquals
@@ -7,9 +8,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class FakePrivacyContext : ContextWrapper(null) {
+open class FakePrivacyContext : ContextWrapper(null) {
     override fun checkPermission(permission: String, pid: Int, uid: Int): Int {
         return android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    override fun getSystemService(name: String): Any? {
+        return null
+    }
+
+    override fun getApplicationContext(): Context {
+        return this
     }
 }
 

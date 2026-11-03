@@ -20,14 +20,14 @@ data class NetworkState(
 class NetworkMonitor(context: Context) {
 
     private val connectivityManager =
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
     private val _networkState = MutableStateFlow(NetworkState())
     val networkState: StateFlow<NetworkState> = _networkState.asStateFlow()
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            updateNetworkCapabilities(connectivityManager.getNetworkCapabilities(network))
+            updateNetworkCapabilities(connectivityManager?.getNetworkCapabilities(network))
         }
 
         override fun onLost(network: Network) {
@@ -43,16 +43,18 @@ class NetworkMonitor(context: Context) {
     }
 
     init {
-        val activeNetwork = connectivityManager.activeNetwork
-        val initialCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        updateNetworkCapabilities(initialCapabilities)
+        connectivityManager?.let { cm ->
+            try {
+                val activeNetwork = cm.activeNetwork
+                val initialCapabilities = cm.getNetworkCapabilities(activeNetwork)
+                updateNetworkCapabilities(initialCapabilities)
 
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        try {
-            connectivityManager.registerNetworkCallback(request, networkCallback)
-        } catch (_: Exception) {}
+                val request = NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+                cm.registerNetworkCallback(request, networkCallback)
+            } catch (_: Exception) {}
+        }
     }
 
     private fun updateNetworkCapabilities(capabilities: NetworkCapabilities?) {
@@ -84,7 +86,7 @@ class NetworkMonitor(context: Context) {
 
     fun unregister() {
         try {
-            connectivityManager.unregisterNetworkCallback(networkCallback)
+            connectivityManager?.unregisterNetworkCallback(networkCallback)
         } catch (_: Exception) {}
     }
 }

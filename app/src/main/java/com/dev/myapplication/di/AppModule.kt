@@ -6,9 +6,12 @@ import androidx.work.WorkManager
 import com.dev.myapplication.data.local.AppDatabase
 import com.dev.myapplication.data.local.dao.ActivityLogDao
 import com.dev.myapplication.data.local.dao.AutomationRuleDao
+import com.dev.myapplication.data.local.dao.BlackBoxDao
 import com.dev.myapplication.data.local.dao.ContextSnapshotDao
 import com.dev.myapplication.data.local.dao.CopilotConversationDao
+import com.dev.myapplication.data.local.dao.DigitalTwinDao
 import com.dev.myapplication.data.local.dao.FocusSessionDao
+import com.dev.myapplication.data.local.dao.ReliabilityScorecardDao
 import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.NetworkMonitor
 import com.dev.myapplication.data.remote.NetworkInfoApi
@@ -20,10 +23,14 @@ import com.dev.myapplication.domain.FramePerformanceMonitor
 import com.dev.myapplication.domain.LiveContextEngine
 import com.dev.myapplication.domain.NetworkDiagnosticsEngine
 import com.dev.myapplication.domain.SmartInsightsEngine
+import com.dev.myapplication.domain.blackbox.DeviceBlackBoxEngine
 import com.dev.myapplication.domain.copilot.CopilotIntentEngine
 import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
+import com.dev.myapplication.domain.core.PulseMindIntelligenceCore
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
+import com.dev.myapplication.domain.scorecard.ReliabilityScorecardEngine
+import com.dev.myapplication.domain.twin.DigitalTwinEngine
 import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
 import dagger.Module
@@ -76,6 +83,18 @@ object AppModule {
     @Provides
     @Singleton
     fun provideCopilotConversationDao(db: AppDatabase): CopilotConversationDao = db.copilotConversationDao()
+
+    @Provides
+    @Singleton
+    fun provideBlackBoxDao(db: AppDatabase): BlackBoxDao = db.blackBoxDao()
+
+    @Provides
+    @Singleton
+    fun provideReliabilityScorecardDao(db: AppDatabase): ReliabilityScorecardDao = db.reliabilityScorecardDao()
+
+    @Provides
+    @Singleton
+    fun provideDigitalTwinDao(db: AppDatabase): DigitalTwinDao = db.digitalTwinDao()
 
     @Provides
     @Singleton
@@ -218,6 +237,33 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideDeviceBlackBoxEngine(
+        blackBoxDao: BlackBoxDao
+    ): DeviceBlackBoxEngine {
+        return DeviceBlackBoxEngine(blackBoxDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReliabilityScorecardEngine(
+        scorecardDao: ReliabilityScorecardDao,
+        liveContextEngine: LiveContextEngine,
+        predictiveEngine: PredictiveIntelligenceEngine
+    ): ReliabilityScorecardEngine {
+        return ReliabilityScorecardEngine(scorecardDao, liveContextEngine, predictiveEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDigitalTwinEngine(
+        digitalTwinDao: DigitalTwinDao,
+        liveContextEngine: LiveContextEngine
+    ): DigitalTwinEngine {
+        return DigitalTwinEngine(digitalTwinDao, liveContextEngine)
+    }
+
+    @Provides
+    @Singleton
     fun provideCopilotToolDispatcher(
         @ApplicationContext context: Context,
         liveContextEngine: LiveContextEngine,
@@ -267,6 +313,40 @@ object AppModule {
             copilotToolDispatcher = copilotToolDispatcher,
             copilotIntentEngine = copilotIntentEngine,
             copilotConversationDao = copilotConversationDao
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun providePulseMindIntelligenceCore(
+        @ApplicationContext context: Context,
+        liveContextEngine: LiveContextEngine,
+        predictiveEngine: PredictiveIntelligenceEngine,
+        copilotEngine: com.dev.myapplication.domain.AiCopilotEngine,
+        incidentCorrelationEngine: com.dev.myapplication.domain.IncidentCorrelationEngine,
+        privacyRiskEngine: PrivacyRiskEngine,
+        deviceBlackBoxEngine: DeviceBlackBoxEngine,
+        reliabilityScorecardEngine: ReliabilityScorecardEngine,
+        digitalTwinEngine: DigitalTwinEngine,
+        batteryMonitor: BatteryMonitor,
+        networkMonitor: NetworkMonitor,
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
+        userPreferencesRepository: UserPreferencesRepository
+    ): PulseMindIntelligenceCore {
+        return PulseMindIntelligenceCore(
+            context = context,
+            liveContextEngine = liveContextEngine,
+            predictiveEngine = predictiveEngine,
+            copilotEngine = copilotEngine,
+            incidentCorrelationEngine = incidentCorrelationEngine,
+            privacyRiskEngine = privacyRiskEngine,
+            deviceBlackBoxEngine = deviceBlackBoxEngine,
+            reliabilityScorecardEngine = reliabilityScorecardEngine,
+            digitalTwinEngine = digitalTwinEngine,
+            batteryMonitor = batteryMonitor,
+            networkMonitor = networkMonitor,
+            incidentDao = incidentDao,
+            userPreferencesRepository = userPreferencesRepository
         )
     }
 
