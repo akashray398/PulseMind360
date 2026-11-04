@@ -14,20 +14,21 @@ import com.dev.myapplication.data.monitor.NetworkMonitor
 import com.dev.myapplication.data.monitor.NetworkState
 import com.dev.myapplication.data.repository.UserPreferencesRepository
 import com.dev.myapplication.domain.blackbox.DeviceBlackBoxEngine
+import com.dev.myapplication.domain.causality.DeviceCausalityEngine
 import com.dev.myapplication.domain.copilot.CopilotIntentEngine
 import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
 import com.dev.myapplication.domain.core.IntelligenceResult
 import com.dev.myapplication.domain.core.PulseMindIntelligenceCore
+import com.dev.myapplication.domain.healing.SelfHealingOrchestrator
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import com.dev.myapplication.domain.scorecard.ReliabilityScorecardEngine
 import com.dev.myapplication.domain.twin.DigitalTwinEngine
+import com.dev.myapplication.domain.warning.EarlyWarningSystem
 import com.dev.myapplication.util.MemoryState
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -108,6 +109,7 @@ class SharedReliabilityArchitectureTest {
     private val activityLogDao = FakeActivityLogDao()
     private val sentinelBaselineDao = FakeCoreSentinelBaselineDao()
     private val copilotConversationDao = FakeCoreCopilotConversationDao()
+    private val adiDao = FakeAdiDao()
 
     private val batteryMonitor = BatteryMonitor(fakeContext)
     private val networkMonitor = NetworkMonitor(fakeContext)
@@ -129,6 +131,10 @@ class SharedReliabilityArchitectureTest {
     private val blackBoxEngine = DeviceBlackBoxEngine(blackBoxDao)
     private val scorecardEngine = ReliabilityScorecardEngine(scorecardDao, liveContextEngine, predictiveEngine)
     private val digitalTwinEngine = DigitalTwinEngine(digitalTwinDao, liveContextEngine)
+
+    private val causalityEngine = DeviceCausalityEngine(adiDao, incidentDao, blackBoxEngine, digitalTwinEngine)
+    private val warningSystem = EarlyWarningSystem(adiDao, sentinelBaselineDao, predictiveEngine)
+    private val healingOrchestrator = SelfHealingOrchestrator(fakeContext, adiDao, digitalTwinEngine)
 
     private val copilotToolDispatcher = CopilotToolDispatcher(
         context = fakeContext,
@@ -162,6 +168,9 @@ class SharedReliabilityArchitectureTest {
         deviceBlackBoxEngine = blackBoxEngine,
         reliabilityScorecardEngine = scorecardEngine,
         digitalTwinEngine = digitalTwinEngine,
+        deviceCausalityEngine = causalityEngine,
+        earlyWarningSystem = warningSystem,
+        selfHealingOrchestrator = healingOrchestrator,
         batteryMonitor = batteryMonitor,
         networkMonitor = networkMonitor,
         incidentDao = incidentDao,

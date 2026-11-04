@@ -91,3 +91,48 @@ data class CanonicalReliabilityAssessment(
     val explanation: String = "All parameters nominal.",
     val unavailableInputs: List<String> = emptyList()
 )
+
+// Autonomous Device Intelligence (ADI) Contracts
+data class CausalHypothesis(
+    val hypothesisId: String = java.util.UUID.randomUUID().toString(),
+    val problemSummary: String,
+    val primaryCause: String,
+    val secondaryFactors: List<String> = emptyList(),
+    val confidenceScore: Int = 85,
+    val evidenceChain: List<String> = emptyList(),
+    val alternativeHypotheses: List<String> = emptyList(),
+    val isConfirmedCausal: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+data class EarlyWarningRecord(
+    val warningId: String = java.util.UUID.randomUUID().toString(),
+    val metricType: String,
+    val baselineValue: String,
+    val currentTrendValue: String,
+    val degradationRiskLevel: String = "MEDIUM", // LOW, MEDIUM, HIGH, CRITICAL
+    val evidenceWindowHours: Int = 24,
+    val recommendedPrevention: String,
+    val confidenceScore: Int = 90,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+data class SelfHealingAction(
+    val actionId: String = java.util.UUID.randomUUID().toString(),
+    val actionType: String, // INFORMATIONAL, SETTINGS_NAVIGATION, SUPPORTED_APP_ACTION, RESTRICTED_AUTH
+    val title: String,
+    val requiredPermission: String = "",
+    val expectedBenefit: String,
+    val riskLevel: String = "LOW",
+    val isExecutable: Boolean = true
+)
+
+data class ActionExecutionResult(
+    val executionId: String = java.util.UUID.randomUUID().toString(),
+    val actionId: String,
+    val isSuccess: Boolean,
+    val preStateSummary: String,
+    val postStateSummary: String,
+    val verificationStatus: String = "VERIFIED",
+    val timestamp: Long = System.currentTimeMillis()
+)

@@ -12,13 +12,19 @@ import com.dev.myapplication.domain.LiveContextEngine
 import com.dev.myapplication.domain.LiveDeviceContext
 import com.dev.myapplication.domain.blackbox.BlackBoxSessionReport
 import com.dev.myapplication.domain.blackbox.DeviceBlackBoxEngine
+import com.dev.myapplication.domain.causality.CausalityAnalysisResult
+import com.dev.myapplication.domain.causality.DeviceCausalityEngine
 import com.dev.myapplication.domain.copilot.CopilotResponseDetail
+import com.dev.myapplication.domain.healing.SelfHealingOrchestrator
+import com.dev.myapplication.domain.healing.SelfHealingOverview
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import com.dev.myapplication.domain.scorecard.ReliabilityScorecard
 import com.dev.myapplication.domain.scorecard.ReliabilityScorecardEngine
 import com.dev.myapplication.domain.twin.DigitalTwinEngine
 import com.dev.myapplication.domain.twin.SimulationResult
+import com.dev.myapplication.domain.warning.EarlyWarningAnalysisResult
+import com.dev.myapplication.domain.warning.EarlyWarningSystem
 import com.dev.myapplication.util.MemoryOptimizer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +44,9 @@ class PulseMindIntelligenceCore @Inject constructor(
     private val deviceBlackBoxEngine: DeviceBlackBoxEngine,
     private val reliabilityScorecardEngine: ReliabilityScorecardEngine,
     private val digitalTwinEngine: DigitalTwinEngine,
+    private val deviceCausalityEngine: DeviceCausalityEngine,
+    private val earlyWarningSystem: EarlyWarningSystem,
+    private val selfHealingOrchestrator: SelfHealingOrchestrator,
     private val batteryMonitor: BatteryMonitor,
     private val networkMonitor: NetworkMonitor,
     private val incidentDao: IncidentDao,
@@ -179,6 +188,68 @@ class PulseMindIntelligenceCore @Inject constructor(
             IntelligenceResult.Success(result)
         } catch (e: Exception) {
             IntelligenceResult.Error("Failed to execute Digital Twin simulation", e)
+        }
+    }
+
+    /**
+     * Autonomous Device Intelligence (ADI): Device Causality Analysis
+     */
+    suspend fun getDeviceCausalityAnalysis(): IntelligenceResult<CausalityAnalysisResult> {
+        return try {
+            val bState = batteryMonitor.batteryState.value
+            val nState = networkMonitor.networkState.value
+            val mState = MemoryOptimizer.getMemoryState(context)
+            val result = deviceCausalityEngine.analyzeDeviceCausality(bState, nState, mState)
+            IntelligenceResult.Success(result)
+        } catch (e: Exception) {
+            IntelligenceResult.Error("Failed to run device causality analysis", e)
+        }
+    }
+
+    /**
+     * Autonomous Device Intelligence (ADI): Early Warning System
+     */
+    suspend fun getEarlyWarnings(): IntelligenceResult<EarlyWarningAnalysisResult> {
+        return try {
+            val bState = batteryMonitor.batteryState.value
+            val nState = networkMonitor.networkState.value
+            val mState = MemoryOptimizer.getMemoryState(context)
+            val result = earlyWarningSystem.evaluateEarlyWarnings(bState, nState, mState)
+            IntelligenceResult.Success(result)
+        } catch (e: Exception) {
+            IntelligenceResult.Error("Failed to evaluate early warning indicators", e)
+        }
+    }
+
+    /**
+     * Autonomous Device Intelligence (ADI): Self-Healing Overview
+     */
+    fun getSelfHealingOverview(): IntelligenceResult<SelfHealingOverview> {
+        return try {
+            val actions = selfHealingOrchestrator.getAvailableActions()
+            IntelligenceResult.Success(
+                SelfHealingOverview(
+                    availableActions = actions,
+                    systemReadinessText = "Self-Healing Orchestrator ready with ${actions.size} supported actions."
+                )
+            )
+        } catch (e: Exception) {
+            IntelligenceResult.Error("Failed to fetch self-healing overview", e)
+        }
+    }
+
+    /**
+     * Autonomous Device Intelligence (ADI): Execute Self-Healing Action
+     */
+    suspend fun executeSelfHealingAction(
+        actionId: String,
+        isAuthenticated: Boolean = false
+    ): IntelligenceResult<ActionExecutionResult> {
+        return try {
+            val result = selfHealingOrchestrator.executeAction(actionId, isAuthenticated)
+            IntelligenceResult.Success(result)
+        } catch (e: Exception) {
+            IntelligenceResult.Error("Execution failed for self-healing action '$actionId'", e)
         }
     }
 }

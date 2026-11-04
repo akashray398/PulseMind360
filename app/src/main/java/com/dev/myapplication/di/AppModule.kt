@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.work.WorkManager
 import com.dev.myapplication.data.local.AppDatabase
 import com.dev.myapplication.data.local.dao.ActivityLogDao
+import com.dev.myapplication.data.local.dao.AdiDao
 import com.dev.myapplication.data.local.dao.AutomationRuleDao
 import com.dev.myapplication.data.local.dao.BlackBoxDao
 import com.dev.myapplication.data.local.dao.ContextSnapshotDao
@@ -24,13 +25,16 @@ import com.dev.myapplication.domain.LiveContextEngine
 import com.dev.myapplication.domain.NetworkDiagnosticsEngine
 import com.dev.myapplication.domain.SmartInsightsEngine
 import com.dev.myapplication.domain.blackbox.DeviceBlackBoxEngine
+import com.dev.myapplication.domain.causality.DeviceCausalityEngine
 import com.dev.myapplication.domain.copilot.CopilotIntentEngine
 import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
 import com.dev.myapplication.domain.core.PulseMindIntelligenceCore
+import com.dev.myapplication.domain.healing.SelfHealingOrchestrator
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import com.dev.myapplication.domain.scorecard.ReliabilityScorecardEngine
 import com.dev.myapplication.domain.twin.DigitalTwinEngine
+import com.dev.myapplication.domain.warning.EarlyWarningSystem
 import com.dev.myapplication.util.BiometricHelper
 import com.dev.myapplication.util.NotificationHelper
 import dagger.Module
@@ -95,6 +99,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDigitalTwinDao(db: AppDatabase): DigitalTwinDao = db.digitalTwinDao()
+
+    @Provides
+    @Singleton
+    fun provideAdiDao(db: AppDatabase): AdiDao = db.adiDao()
 
     @Provides
     @Singleton
@@ -264,6 +272,37 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideDeviceCausalityEngine(
+        adiDao: AdiDao,
+        incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
+        blackBoxEngine: DeviceBlackBoxEngine,
+        digitalTwinEngine: DigitalTwinEngine
+    ): DeviceCausalityEngine {
+        return DeviceCausalityEngine(adiDao, incidentDao, blackBoxEngine, digitalTwinEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEarlyWarningSystem(
+        adiDao: AdiDao,
+        sentinelBaselineDao: com.dev.myapplication.data.local.dao.SentinelBaselineDao,
+        predictiveEngine: PredictiveIntelligenceEngine
+    ): EarlyWarningSystem {
+        return EarlyWarningSystem(adiDao, sentinelBaselineDao, predictiveEngine)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSelfHealingOrchestrator(
+        @ApplicationContext context: Context,
+        adiDao: AdiDao,
+        digitalTwinEngine: DigitalTwinEngine
+    ): SelfHealingOrchestrator {
+        return SelfHealingOrchestrator(context, adiDao, digitalTwinEngine)
+    }
+
+    @Provides
+    @Singleton
     fun provideCopilotToolDispatcher(
         @ApplicationContext context: Context,
         liveContextEngine: LiveContextEngine,
@@ -328,6 +367,9 @@ object AppModule {
         deviceBlackBoxEngine: DeviceBlackBoxEngine,
         reliabilityScorecardEngine: ReliabilityScorecardEngine,
         digitalTwinEngine: DigitalTwinEngine,
+        deviceCausalityEngine: DeviceCausalityEngine,
+        earlyWarningSystem: EarlyWarningSystem,
+        selfHealingOrchestrator: SelfHealingOrchestrator,
         batteryMonitor: BatteryMonitor,
         networkMonitor: NetworkMonitor,
         incidentDao: com.dev.myapplication.data.local.dao.IncidentDao,
@@ -343,6 +385,9 @@ object AppModule {
             deviceBlackBoxEngine = deviceBlackBoxEngine,
             reliabilityScorecardEngine = reliabilityScorecardEngine,
             digitalTwinEngine = digitalTwinEngine,
+            deviceCausalityEngine = deviceCausalityEngine,
+            earlyWarningSystem = earlyWarningSystem,
+            selfHealingOrchestrator = selfHealingOrchestrator,
             batteryMonitor = batteryMonitor,
             networkMonitor = networkMonitor,
             incidentDao = incidentDao,

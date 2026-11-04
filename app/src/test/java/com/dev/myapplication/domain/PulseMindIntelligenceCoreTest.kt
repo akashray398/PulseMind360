@@ -11,14 +11,17 @@ import com.dev.myapplication.data.monitor.BatteryMonitor
 import com.dev.myapplication.data.monitor.NetworkMonitor
 import com.dev.myapplication.data.repository.UserPreferencesRepository
 import com.dev.myapplication.domain.blackbox.DeviceBlackBoxEngine
+import com.dev.myapplication.domain.causality.DeviceCausalityEngine
 import com.dev.myapplication.domain.copilot.CopilotIntentEngine
 import com.dev.myapplication.domain.copilot.CopilotToolDispatcher
 import com.dev.myapplication.domain.core.IntelligenceResult
 import com.dev.myapplication.domain.core.PulseMindIntelligenceCore
+import com.dev.myapplication.domain.healing.SelfHealingOrchestrator
 import com.dev.myapplication.domain.predictive.PredictiveIntelligenceEngine
 import com.dev.myapplication.domain.privacy.PrivacyRiskEngine
 import com.dev.myapplication.domain.scorecard.ReliabilityScorecardEngine
 import com.dev.myapplication.domain.twin.DigitalTwinEngine
+import com.dev.myapplication.domain.warning.EarlyWarningSystem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -38,6 +41,7 @@ class PulseMindIntelligenceCoreTest {
     private val blackBoxDao = FakeBlackBoxDao()
     private val scorecardDao = FakeReliabilityScorecardDao()
     private val digitalTwinDao = FakeDigitalTwinDao()
+    private val adiDao = FakeAdiDao()
 
     private val batteryMonitor = BatteryMonitor(fakeContext)
     private val networkMonitor = NetworkMonitor(fakeContext)
@@ -59,6 +63,10 @@ class PulseMindIntelligenceCoreTest {
     private val blackBoxEngine = DeviceBlackBoxEngine(blackBoxDao)
     private val scorecardEngine = ReliabilityScorecardEngine(scorecardDao, liveContextEngine, predictiveEngine)
     private val digitalTwinEngine = DigitalTwinEngine(digitalTwinDao, liveContextEngine)
+
+    private val causalityEngine = DeviceCausalityEngine(adiDao, incidentDao, blackBoxEngine, digitalTwinEngine)
+    private val warningSystem = EarlyWarningSystem(adiDao, sentinelBaselineDao, predictiveEngine)
+    private val healingOrchestrator = SelfHealingOrchestrator(fakeContext, adiDao, digitalTwinEngine)
 
     private val smartInsightsEngine = SmartInsightsEngine()
     private val networkDiagnosticsEngine = NetworkDiagnosticsEngine()
@@ -100,6 +108,9 @@ class PulseMindIntelligenceCoreTest {
         deviceBlackBoxEngine = blackBoxEngine,
         reliabilityScorecardEngine = scorecardEngine,
         digitalTwinEngine = digitalTwinEngine,
+        deviceCausalityEngine = causalityEngine,
+        earlyWarningSystem = warningSystem,
+        selfHealingOrchestrator = healingOrchestrator,
         batteryMonitor = batteryMonitor,
         networkMonitor = networkMonitor,
         incidentDao = incidentDao,
