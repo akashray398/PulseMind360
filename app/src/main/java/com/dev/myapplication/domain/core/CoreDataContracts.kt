@@ -114,6 +114,7 @@ data class EarlyWarningRecord(
     val evidenceWindowHours: Int = 24,
     val recommendedPrevention: String,
     val confidenceScore: Int = 90,
+    val lifecycleStatus: String = "ACTIVE", // ACTIVE, COOLING_DOWN, RECOVERED
     val timestamp: Long = System.currentTimeMillis()
 )
 

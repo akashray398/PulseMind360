@@ -143,7 +143,7 @@ class AutonomousDeviceIntelligenceTest {
 
     @Test
     fun earlyWarningSystem_detectsBaselineDeviations() = runTest {
-        val bState = BatteryState(level = 50, temperature = 36.0f)
+        val bState = BatteryState(level = 50, temperature = 38.0f)
         val nState = NetworkState(isConnected = true)
         val mState = MemoryState(usagePct = 85)
 
@@ -152,6 +152,21 @@ class AutonomousDeviceIntelligenceTest {
         assertNotNull(result)
         assertTrue(result.warnings.isNotEmpty())
         assertTrue(adiDao.earlyWarnings.isNotEmpty())
+    }
+
+    @Test
+    fun earlyWarningSystem_enforcesCooldownAndNetworkWarning() = runTest {
+        val bState = BatteryState(level = 50, temperature = 38.0f)
+        val nState = NetworkState(isConnected = false)
+        val mState = MemoryState(usagePct = 50)
+
+        // Initial Evaluation
+        val res1 = warningSystem.evaluateEarlyWarnings(bState, nState, mState)
+        assertTrue(res1.warnings.any { it.metricType == "NETWORK_INSTABILITY" })
+
+        // Immediate Re-evaluation (Cooldown active)
+        val res2 = warningSystem.evaluateEarlyWarnings(bState, nState, mState)
+        assertTrue(res2.warnings.isEmpty()) // Cooldown skips duplicate warning
     }
 
     @Test
