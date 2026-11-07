@@ -243,10 +243,11 @@ class PulseMindIntelligenceCore @Inject constructor(
      */
     suspend fun executeSelfHealingAction(
         actionId: String,
-        isAuthenticated: Boolean = false
+        isAuthenticated: Boolean = false,
+        authToken: String = ""
     ): IntelligenceResult<ActionExecutionResult> {
         return try {
-            val result = selfHealingOrchestrator.executeAction(actionId, isAuthenticated)
+            val result = selfHealingOrchestrator.executeAction(actionId, isAuthenticated, authToken)
             IntelligenceResult.Success(result)
         } catch (e: Exception) {
             IntelligenceResult.Error("Execution failed for self-healing action '$actionId'", e)

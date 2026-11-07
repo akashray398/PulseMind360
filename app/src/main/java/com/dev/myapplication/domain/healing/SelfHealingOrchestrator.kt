@@ -18,6 +18,18 @@ class SelfHealingOrchestrator @Inject constructor(
     private val digitalTwinEngine: DigitalTwinEngine
 ) {
 
+    fun generateAuthToken(actionId: String): String {
+        val timestampWindow = System.currentTimeMillis() / 60_000L // 1-minute window token
+        return "AUTH_TOKEN_${actionId}_${timestampWindow}"
+    }
+
+    fun validateAuthToken(actionId: String, token: String): Boolean {
+        if (token.isBlank()) return false
+        val currentWindowToken = generateAuthToken(actionId)
+        val prevWindowToken = "AUTH_TOKEN_${actionId}_${(System.currentTimeMillis() / 60_000L) - 1}"
+        return token == currentWindowToken || token == prevWindowToken
+    }
+
     fun getAvailableActions(): List<SelfHealingAction> {
         return listOf(
             SelfHealingAction(
@@ -58,7 +70,8 @@ class SelfHealingOrchestrator @Inject constructor(
 
     suspend fun executeAction(
         actionId: String,
-        isAuthenticated: Boolean = false
+        isAuthenticated: Boolean = false,
+        authToken: String = ""
     ): ActionExecutionResult {
         val now = System.currentTimeMillis()
         val actions = getAvailableActions()
@@ -68,29 +81,40 @@ class SelfHealingOrchestrator @Inject constructor(
                 isSuccess = false,
                 preStateSummary = "Action ID Unknown",
                 postStateSummary = "Execution Aborted: Action not registered",
-                verificationStatus = "FAILED"
+                verificationStatus = "FAILED",
+                executionState = "FAILED"
             )
 
         // Auth Enforcement for Restricted Actions
-        if (action.actionType == "RESTRICTED_AUTH" && !isAuthenticated) {
+        val isTokenValid = validateAuthToken(actionId, authToken)
+        if (action.actionType == "RESTRICTED_AUTH" && !isAuthenticated && !isTokenValid) {
             return ActionExecutionResult(
                 actionId = actionId,
                 isSuccess = false,
-                preStateSummary = "Action Requires Authentication",
-                postStateSummary = "Execution Denied: Biometric / Device credential authorization required.",
-                verificationStatus = "UNAUTHORIZED"
+                preStateSummary = "Action Requires Authorization",
+                postStateSummary = "Execution Denied: Biometric / Device credential authorization or valid token required.",
+                verificationStatus = "UNAUTHORIZED",
+                executionState = "UNAUTHORIZED"
             )
         }
 
         val preMem = MemoryOptimizer.getMemoryState(context)
         var isSuccess = true
+        var verificationStatus = "VERIFIED"
+        var executionState = "SUCCEEDED"
         var postSummary = ""
 
         when (actionId) {
             "TRIM_RAM_CACHE" -> {
                 System.gc()
                 val postMem = MemoryOptimizer.getMemoryState(context)
-                postSummary = "Memory Cache Trimmed. Usage: ${postMem.usagePct}% (Pre: ${preMem.usagePct}%)."
+                if (postMem.usagePct == preMem.usagePct) {
+                    verificationStatus = "UNCERTAIN"
+                    executionState = "UNCERTAIN"
+                    postSummary = "Memory Cache Trimmed. Usage unchanged at ${postMem.usagePct}%."
+                } else {
+                    postSummary = "Memory Cache Trimmed. Usage: ${postMem.usagePct}% (Pre: ${preMem.usagePct}%)."
+                }
                 digitalTwinEngine.recordStateTransition("RAM_TRIM_ACTION", "${preMem.usagePct}%", "${postMem.usagePct}%")
             }
             "RESET_NETWORK_SOCKETS" -> {
@@ -106,6 +130,8 @@ class SelfHealingOrchestrator @Inject constructor(
             }
             else -> {
                 isSuccess = false
+                verificationStatus = "FAILED"
+                executionState = "FAILED"
                 postSummary = "Action not supported on current device runtime."
             }
         }
@@ -115,7 +141,9 @@ class SelfHealingOrchestrator @Inject constructor(
             isSuccess = isSuccess,
             preStateSummary = "Pre-Action: RAM=${preMem.usagePct}%",
             postStateSummary = postSummary,
-            verificationStatus = if (isSuccess) "VERIFIED" else "FAILED",
+            verificationStatus = verificationStatus,
+            executionState = executionState,
+            authToken = if (isTokenValid) authToken else "",
             timestamp = now
         )
 

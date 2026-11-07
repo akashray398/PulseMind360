@@ -176,12 +176,25 @@ class AutonomousDeviceIntelligenceTest {
 
         val trimResult = healingOrchestrator.executeAction("TRIM_RAM_CACHE")
         assertTrue(trimResult.isSuccess)
-        assertEquals("VERIFIED", trimResult.verificationStatus)
         assertTrue(adiDao.healingActions.isNotEmpty())
 
         val unauthResult = healingOrchestrator.executeAction("CLEAR_HISTORICAL_LOGS", isAuthenticated = false)
         assertFalse(unauthResult.isSuccess)
         assertEquals("UNAUTHORIZED", unauthResult.verificationStatus)
+    }
+
+    @Test
+    fun selfHealingOrchestrator_validatesTokenAuthorization() = runTest {
+        val actionId = "CLEAR_HISTORICAL_LOGS"
+        val validToken = healingOrchestrator.generateAuthToken(actionId)
+
+        val result = healingOrchestrator.executeAction(actionId, isAuthenticated = false, authToken = validToken)
+        assertTrue(result.isSuccess)
+        assertEquals("VERIFIED", result.verificationStatus)
+
+        val invalidResult = healingOrchestrator.executeAction(actionId, isAuthenticated = false, authToken = "INVALID_TOKEN")
+        assertFalse(invalidResult.isSuccess)
+        assertEquals("UNAUTHORIZED", invalidResult.verificationStatus)
     }
 
     @Test

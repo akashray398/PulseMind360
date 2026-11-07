@@ -134,6 +134,8 @@ data class ActionExecutionResult(
     val isSuccess: Boolean,
     val preStateSummary: String,
     val postStateSummary: String,
-    val verificationStatus: String = "VERIFIED",
+    val verificationStatus: String = "VERIFIED", // VERIFIED, UNCERTAIN, FAILED, UNAUTHORIZED
+    val executionState: String = "SUCCEEDED", // PROPOSED, AUTHORIZED, EXECUTING, SUCCEEDED, FAILED, UNCERTAIN, UNAUTHORIZED, CANCELLED
+    val authToken: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
